@@ -1,7 +1,6 @@
 # Condinbot
 Not a gem! A sandbox where to develop bots for codingame in TDD manner, in separate, testable files.
-This one is a solition for Mars Lander 3 (and by extension 2 and 1).
-Here's a graceful replay https://www.codingame.com/replay/802656694
+This one is a solition for 2024 Fall Challenge - Selenia City.
 
 ## Use
 1. Place files in `lib/`, and require them in `lib/codinbot.rb` like you normally would.

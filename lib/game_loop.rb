@@ -4,14 +4,14 @@ loop do
   money = gets.to_i
   debug("Money: #{money}")
 
-  num_travel_routes = gets.to_i
-  debug("Number of routes: #{num_travel_routes}")
+  num_connections = gets.to_i
+  debug("Number of routes: #{num_connections}")
 
-  travel_routes = []
-  num_travel_routes.times do
+  connections = []
+  num_connections.times do
     building_id_1, building_id_2, cap = gets.split.map(&:to_i)
     route = {b_id_1: building_id_1, b_id_2: building_id_2, cap: cap}
-    travel_routes << route
+    connections << route
     debug("  #{route}")
   end
 
@@ -21,8 +21,9 @@ loop do
   pods = {}
   num_pods.times do
     pod_props = gets.chomp.split(" ").map(&:to_i)
-    debug("  #{pod_props}")
     pods[pod_props.first] = pod_props[1..]
+
+    debug("  #{pod_props.first} => #{pod_props[1..]},")
   end
 
   num_new_buildings = gets.to_i
@@ -43,5 +44,5 @@ loop do
     debug("  #{bd[0..4]} #{nauts}")
   end
 
-  puts controller.call(money: money, travel_routes: travel_routes, pods: pods, new_buildings: new_buildings)
+  puts controller.call(money: money, connections: connections, pods: pods, new_buildings: new_buildings)
 end

@@ -5,7 +5,7 @@ class Controller
   # attr_reader :pads # Set of pad ids to look up in :buildings hash
   attr_reader :modules # Set of module ids to look up in :buildings hash
 
-  attr_reader :money, :travel_routes, :pods, :new_buildings
+  attr_reader :money, :connections, :pods, :new_buildings
   attr_reader :command # a mutable array to collect the various moves
 
   # @param buildings [Hash] allows setting the game-state to whatever move with previous buildings
@@ -14,18 +14,20 @@ class Controller
     @pads = [].to_set
     @modules = [].to_set
     @buildings_by_type = Hash.new { |h, k| h[k] = Set.new }
+
+    initialize_building_list!
   end
 
   # @param money [Integer]
-  # @param travel_routes [Array<Hash>]
+  # @param connections [Array<Hash>]
   # @param pods [Hash] { id => [props] }
   # @param new_buildings [Array<Array>] [[], []]
   #
   # @return [String] the improvement command(s) to undertake
-  def call(money:, travel_routes:, pods:, new_buildings:)
+  def call(money:, connections:, pods:, new_buildings: [])
     @command = []
     @money = money
-    @travel_routes = travel_routes
+    @connections = connections
     @pods = pods
     @new_buildings = new_buildings
 
@@ -39,10 +41,14 @@ class Controller
 
   private
 
+  # VERY naive strat, connects pads directly to modules os matching color nauts.
   def connect_pad_to_modules
     pads.each do |id|
       conn_fragments = []
       modules.each do |module_id|
+        next if _already_connected = connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
+        next if _no_matching_nauts = (buildings[id][:astronauts].keys & [buildings[module_id][:type]]).empty?
+
         distance = Segment[
           Point[buildings[id][:x], buildings[id][:y]],
           Point[buildings[module_id][:x], buildings[module_id][:y]]
@@ -55,13 +61,24 @@ class Controller
         command << "TUBE #{conn_fragment}"
       end
 
-      scaling = 20/conn_fragments.size
+      next if conn_fragments.none?
+
+      scaling = 20/conn_fragments[0..4].size
       command << "POD 42 #{(conn_fragments * (scaling / 2).floor).join(" ")}"
     end
   end
 
   def pads
     buildings_by_type[0]
+  end
+
+  def initialize_building_list!
+    buildings.each_pair do |id, data|
+      buildings_by_type[data[:type]] << id
+      modules << id if data[:type] != 0
+    end
+
+    nil
   end
 
   def update_building_list!(new_buildings)
@@ -84,7 +101,7 @@ class Controller
 
     debug("Buildings on map:")
     buildings.each_pair do |id, data|
-      debug("  #{id}: #{data}")
+      debug("  #{id} => #{data},")
     end
 
     nil

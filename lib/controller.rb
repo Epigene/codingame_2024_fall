@@ -6,6 +6,7 @@ class Controller
   attr_reader :modules # Set of module ids to look up in :buildings hash
 
   attr_reader :money, :travel_routes, :pods, :new_buildings
+  attr_reader :command # a mutable array to collect the various moves
 
   # @param buildings [Hash] allows setting the game-state to whatever move with previous buildings
   def initialize(buildings: {})
@@ -22,6 +23,7 @@ class Controller
   #
   # @return [String] the improvement command(s) to undertake
   def call(money:, travel_routes:, pods:, new_buildings:)
+    @command = []
     @money = money
     @travel_routes = travel_routes
     @pods = pods
@@ -29,12 +31,26 @@ class Controller
 
     update_building_list!(new_buildings)
 
-    binding.pry
+    connect_pad_to_modules
 
-    "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2"
+    # "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2"
+    command.join(";")
   end
 
   private
+
+  def connect_pad_to_modules
+    pads.each do |id|
+      conn_fragments = []
+      modules.each do |module_id|
+        conn_fragment = "#{id} #{module_id}"
+        conn_fragments << conn_fragment
+        command << "TUBE #{conn_fragment}"
+      end
+
+      command << "POD 42 #{conn_fragments.join(" ")}"
+    end
+  end
 
   def pads
     buildings_by_type[0]

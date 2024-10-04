@@ -1,5 +1,10 @@
 class Controller
-  attr_reader :buildings, :pads, :modules
+  attr_reader :buildings # Hash of id => {type: 0, x: bd[2], y: bd[3], astronauts: astronauts} pairs
+  attr_reader :buildings_by_type # Hash of `type => Set` pairs
+
+  # attr_reader :pads # Set of pad ids to look up in :buildings hash
+  attr_reader :modules # Set of module ids to look up in :buildings hash
+
   attr_reader :money, :travel_routes, :pods, :new_buildings
 
   # @param buildings [Hash] allows setting the game-state to whatever move with previous buildings
@@ -7,6 +12,7 @@ class Controller
     @buildings = buildings
     @pads = [].to_set
     @modules = [].to_set
+    @buildings_by_type = Hash.new { |h, k| h[k] = Set.new }
   end
 
   # @param money [Integer]
@@ -23,12 +29,14 @@ class Controller
 
     update_building_list!(new_buildings)
 
-    binding.pry
-
-    "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2"
+    "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2"
   end
 
   private
+
+  def pads
+    buildings_by_type[0]
+  end
 
   def update_building_list!(new_buildings)
     new_buildings.each do |bd| # moduleType buildingId coordX coordY, *
@@ -42,6 +50,7 @@ class Controller
           {type: 0, x: bd[2], y: bd[3], astronauts: astronauts}
         else
           modules << id
+          buildings_by_type[bd[0]] << id
 
           {type: bd[0], x: bd[2], y: bd[3]}
         end

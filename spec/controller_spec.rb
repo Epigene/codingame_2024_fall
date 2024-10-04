@@ -19,10 +19,10 @@ RSpec.describe Controller, instance_name: :controller do
       it "returns the command to link to both building 1 and 2 construct a pod looping both" do
         expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2")
 
-        expect(controller.buildings).to eq(
-          [
-
-          ]
+        expect(controller.buildings).to contain_exactly(
+          {:astronauts=>{1=>15, 2=>15}, :type=>0, :x=>80, :y=>60},
+          {:type=>1, :x=>40, :y=>30},
+          {:type=>2, :x=>120, :y=>30}
         )
       end
     end

@@ -35,8 +35,7 @@ class Controller
 
     connect_pad_to_modules
 
-    # "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2"
-    command.join(";")
+    command.any? ? command.join(";") : "WAIT"
   end
 
   private

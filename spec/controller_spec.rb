@@ -9,7 +9,7 @@ RSpec.describe Controller, instance_name: :controller do
       let(:options) do
         {
           money: 2000, travel_routes: [], pods: {}, new_buildings: [
-            %w[0 0 80 60 30 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2 1 2].map(&:to_i),
+            [0, 0, 80, 60, 30, *[1]*15, *[2]*15],
             %w[1 1 40 30].map(&:to_i),
             %w[2 2 120 30].map(&:to_i)
           ]

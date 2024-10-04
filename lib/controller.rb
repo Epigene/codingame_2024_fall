@@ -43,6 +43,13 @@ class Controller
     pads.each do |id|
       conn_fragments = []
       modules.each do |module_id|
+        distance = Segment[
+          Point[buildings[id][:x], buildings[id][:y]],
+          Point[buildings[module_id][:x], buildings[module_id][:y]]
+        ].length
+
+        debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{(distance * 10).floor}")
+
         conn_fragment = "#{id} #{module_id}"
         conn_fragments << conn_fragment
         command << "TUBE #{conn_fragment}"

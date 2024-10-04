@@ -53,7 +53,10 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns a simple command to only link pads to same-color modules" do
-        expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2")
+        expect(call).to eq(
+          "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2;TUBE 5 0;TUBE 5 2;TUBE 5 4;" \
+          "POD 43 5 0 5 2 5 4 5 0 5 2 5 4 5 0 5 2 5 4"
+        )
       end
     end
   end

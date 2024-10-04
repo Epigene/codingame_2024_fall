@@ -64,7 +64,7 @@ class Controller
       next if conn_fragments.none?
 
       scaling = 20/conn_fragments[0..4].size
-      command << "POD 42 #{(conn_fragments * (scaling / 2).floor).join(" ")}"
+      command << "POD #{42+pods.size} #{(conn_fragments * (scaling / 2).floor).join(" ")}"
     end
   end
 

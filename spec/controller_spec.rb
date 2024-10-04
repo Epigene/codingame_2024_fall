@@ -17,7 +17,7 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns the command to link to both building 1 and 2 construct a pod looping both" do
-        expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2")
+        expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2")
 
         expect(controller.buildings).to eq(
           0=>{:type=>0, :x=>80, :y=>60, :astronauts=>{1=>15, 2=>15}},

@@ -48,7 +48,8 @@ class Controller
         command << "TUBE #{conn_fragment}"
       end
 
-      command << "POD 42 #{conn_fragments.join(" ")}"
+      scaling = 20/conn_fragments.size
+      command << "POD 42 #{(conn_fragments * (scaling / 2).floor).join(" ")}"
     end
   end
 

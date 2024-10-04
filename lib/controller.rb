@@ -29,6 +29,8 @@ class Controller
 
     update_building_list!(new_buildings)
 
+    binding.pry
+
     "TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2"
   end
 

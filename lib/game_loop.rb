@@ -32,7 +32,7 @@ loop do
   num_new_buildings.times do
     building_properties = gets.chomp
     debug("  #{building_properties}")
-    new_buildings << building_properties
+    new_buildings << building_properties.split(" ").map(&:to_i)
   end
 
   puts controller.call(money: money, travel_routes: travel_routes, pods: pods, new_buildings: new_buildings)

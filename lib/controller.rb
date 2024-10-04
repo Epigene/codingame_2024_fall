@@ -82,6 +82,11 @@ class Controller
         end
     end
 
+    debug("Buildings on map:")
+    buildings.each_pair do |id, data|
+      debug("  #{id}: #{data}")
+    end
+
     nil
   end
 end

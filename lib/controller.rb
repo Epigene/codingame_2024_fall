@@ -1,6 +1,7 @@
 class Controller
   POD_COST = 1_000
   TP_COST = 5_000
+  REPLACEMENT_COST = 250
   MAX_BUILDINGS = 150
   MAX_TUBES = 5 # per node. + 1 teleporter possibly
 
@@ -38,24 +39,94 @@ class Controller
   def call(money:, connections: [], pods: {}, new_buildings: [])
     time = Benchmark.realtime do
       @commands = []
+
+      #== money calcs
       @money = money
+      if !@expected_money.nil? && @expected_money != @money
+        debug("Expected money to be #{@expected_money}, but got #{@money - @expected_money} more - #{@money}")
+      end
+      #==
+
       @connections = connections
       @pods = pods
       @new_buildings = new_buildings
 
       update_building_list!(new_buildings)
 
+      redo_underutilized_pods
       connect_pads_to_modules
 
       @command = commands.any? ? commands.join(";") : "WAIT"
     end
 
-    debug("Took #{(time * 1000).round}ms to execute", 0)
+    debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 0)
 
     @command
   end
 
   private
+
+  def redo_underutilized_pods
+    pods.each_pair do |id, data|
+      time = Benchmark.realtime do
+        redo_underutilized_pod(id, data)
+      end
+      debug("Processing underutilized_pod##{id} took #{(time * 1000).round}ms", 0)
+    end
+
+    nil
+  end
+
+  def redo_underutilized_pod(id, data) # 42, [20, 0, 1, 0, 1]
+    return unless pod_underutilized?(data)
+    return if (unconnected_types = pad_unconnected_types(data[1])).none?
+
+    connection_options = unconnected_types.each_with_object({}) do |type, mem|
+      mem.merge!(connection_options(data[1], buildings_by_type[type]))
+    end
+
+    return if connection_options.none?
+
+    money_after_pod = money - REPLACEMENT_COST
+
+    connection_options.sort_by do |k, data|
+      [-data[:point_ratio], data[:cost], data[:existing_connections]]
+    end.find do |k, d|
+      next if _too_expensive = (money_after_pod - d[:cost]).negative?
+
+      commit_purchase("TUBE #{k}", cost: d[:cost])
+
+      # remove existing route
+      commit_destruction(id)
+
+      # rebuild route, combining existing and new connection
+      route = pod_route_from_fragments(data[1], _modules = data[2..].uniq - [data[1]] + [d[:module_id]])
+      commit_purchase("POD #{id} #{route}", cost: POD_COST)
+    end
+  end
+
+  def pod_underutilized?(data)
+    root = data[1]
+    unique_stops = data[1..].uniq - [root]
+
+    return if unique_stops.size >= 4
+
+    untransfered = buildings[root][:astronauts].dup
+
+    unique_stops.each do |module_id|
+      untransfered[buildings[module_id][:type]] = 0
+    end
+
+    untransfered.values.sum / buildings[root][:astronauts].values.sum.to_f >= 0.4
+  end
+
+  # @param id [Id] Pad building id
+  def pad_unconnected_types(id)
+    pad = buildings[id]
+    connected_types = pad.fetch(:connections, {}).fetch(:out, {}).keys.map { buildings[_1][:type] }
+
+    pad[:astronauts].keys - connected_types
+  end
 
   # VERY naive strat, connects pads directly to modules of matching color nauts.
   def connect_pads_to_modules
@@ -69,14 +140,10 @@ class Controller
     end
   end
 
-  def connect_pad_to_modules(id)
+  # @param id [Id] # pad id
+  # @return Hash # { "0 1" => {metadata}, ..}
+  def connection_options(id, module_ids)
     pad = buildings[id]
-
-    if one_type_pad_already_connected?(pad)
-      debug("Pad##{id} seems to already have a connection to same-color module")
-      return
-    end
-
     connection_options = {}
 
     modules.each do |module_id|
@@ -105,6 +172,19 @@ class Controller
       debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{cost}")
     end
 
+    connection_options
+  end
+
+  def connect_pad_to_modules(id)
+    pad = buildings[id]
+
+    if one_type_pad_already_connected?(pad)
+      debug("Pad##{id} seems to already have a connection to same-color module")
+      return
+    end
+
+    connection_options = connection_options(id, modules)
+
     return if connection_options.none?
 
     conn_fragments = []
@@ -132,9 +212,17 @@ class Controller
       commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
     end
 
-    scaling = 20/conn_fragments.size
-    command = "POD #{42+pods.size} #{(conn_fragments * (scaling / 2).floor).join(" ")}"
+    route = pod_route_from_fragments(id, conn_fragments.map { |f| f.split(" ").last.to_i })
+    command = "POD #{42+pods.size} #{route}"
     commit_purchase(command, cost: POD_COST)
+  end
+
+  # @param root [Id]
+  # @param modules Array<id>
+  def pod_route_from_fragments(root, modules)
+    base = modules.map { "#{root} #{_1}" }.join(" ")
+
+    ([base] * 10).join(" ").split(" ").first(21).join(" ")
   end
 
   def commit_purchase(command, cost:)
@@ -152,7 +240,15 @@ class Controller
       ensure_connection(*ids.reverse, cap: 1)
     end
 
-    debug("Committing to building #{command} at a cost of #{cost}, leaving #{money} in the bank")
+    debug("Committing to building #{command} at a cost of #{cost}, leaving #{self.money} in the bank")
+  end
+
+  # @param id [Id] pod id
+  def commit_destruction(id)
+    self.money += 750
+    pods[id] = nil
+    commands << "DESTROY #{id}"
+    debug("Committing to destroying Pod##{id} regaining 750 == #{self.money} in the bank")
   end
 
   # upgrades capacities of 1 to 2 etc, but 0 is a TP and is never changed
@@ -229,8 +325,11 @@ class Controller
     end
 
     debug("Buildings on map:")
-    buildings.each_pair do |id, data|
+    buildings.first(30).each do |id, data|
       debug("  #{id} => #{data},")
+    end
+    if buildings.size > 30
+      debug("  .. more omitted ..")
     end
 
     nil

@@ -17,7 +17,7 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns the command to link to both building 1 and 2 construct a pod looping both" do
-        expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2")
+        expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0")
 
         expect(controller.buildings).to match(
           0=> hash_including(:type=>0, :x=>80, :y=>60, :astronauts=>{1=>15, 2=>15}),
@@ -42,6 +42,27 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq(
           "TUBE 0 1;POD 42 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1"
         )
+      end
+    end
+
+    context "when called on turn 2 of test case Example 2" do
+      let(:buildings) do
+        {
+          0 => {:type=>0, :x=>30, :y=>20, :astronauts=>{1=>25, 2=>25}, :connections=>{:out=>{1=>1}, :in=>{1=>1}}},
+          1 => {:type=>1, :x=>130, :y=>20, :connections=>{:in=>{0=>1}, :out=>{0=>1}}},
+          2 => {:type=>2, :x=>130, :y=>70},
+        }
+      end
+
+      let(:options) do
+        {
+          money: 2100, connections: [{:b_id_1=>0, :b_id_2=>1, :cap=>1}],
+          pods: {42 => [20, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]}
+        }
+      end
+
+      it "returns the tricky command of removing existing underutilized pod and redoing it on both tubes" do
+        expect(call).to eq("TUBE 0 2;DESTROY 42;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0")
       end
     end
 
@@ -158,7 +179,7 @@ RSpec.describe Controller, instance_name: :controller do
 
       it "returns a command to connect to closest colors of the new pad" do
         expect(call).to eq(
-          "TUBE 11 10;TUBE 11 9;POD 45 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9"
+          "TUBE 11 10;TUBE 11 9;POD 45 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9 11"
         )
       end
     end

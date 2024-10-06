@@ -5,7 +5,7 @@ loop do
   debug("Money: #{money}")
 
   num_connections = gets.to_i
-  debug("Number of routes: #{num_connections}")
+  debug("Number of connections: #{num_connections}")
 
   connections = []
   num_connections.times do

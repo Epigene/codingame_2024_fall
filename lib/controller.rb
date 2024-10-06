@@ -110,6 +110,14 @@ class Controller
   def commit_purchase(command, cost:)
     self.money -= cost
     commands << command
+
+    if command.start_with?("POD")
+      id = command.match(%r'\APOD (?<id>\d+)')[:id]
+      stops = command.split("POD #{id} ").last.split(" ")
+
+      pods[id.to_i] = [stops.size, *stops.map(&:to_i)]
+    end
+
     debug("Committing to building #{command} at a cost of #{cost}, leaving #{money} in the bank")
   end
 
@@ -146,7 +154,6 @@ class Controller
 
     debug("Buildings on map:")
     buildings.each_pair do |id, data|
-      next if id < 130
       debug("  #{id} => #{data},")
     end
 

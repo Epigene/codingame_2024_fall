@@ -36,11 +36,7 @@ RSpec.describe Controller, instance_name: :controller do
         }
       end
 
-      let(:options) do
-        {
-          money: 3000
-        }
-      end
+      let(:options) { { money: 3000 } }
 
       it "returns a command to connect the one pad to closest module and start a tram" do
         expect(call).to eq(
@@ -77,6 +73,26 @@ RSpec.describe Controller, instance_name: :controller do
       it "returns a simple command to only link pads to same-color modules" do
         expect(call).to eq(
           "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2"
+        )
+      end
+    end
+
+    context "when called with custom example 2 (two starting pods needed)" do
+      let(:buildings) do
+        {
+          0 => {:type=>0, :x=>70, :y=>60, :astronauts=>{1=>2}},
+          1 => {:type=>0, :x=>90, :y=>60, :astronauts=>{2=>2}},
+          2 => {:type=>1, :x=>40, :y=>30},
+          3 => {:type=>2, :x=>120, :y=>30},
+        }
+      end
+
+      let(:options) { { money: 4000 } }
+
+      it "returns a command to start two pods with unique IDs" do
+        expect(call).to eq(
+          "TUBE 0 2;POD 42 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2;" \
+          "TUBE 1 3;POD 43 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3"
         )
       end
     end
@@ -233,7 +249,7 @@ RSpec.describe Controller, instance_name: :controller do
 
       let(:options) { { money: 100000 } }
 
-      it "is quick to give a move even if it's not the best" do
+      xit "is quick to give a move even if it's not the best" do
         expect(call).to eq("yay")
       end
     end

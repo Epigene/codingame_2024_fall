@@ -27,6 +27,28 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
+    context "when called at test case Example 2" do
+      let(:buildings) do
+        {
+          0 => {:type=>0, :x=>30, :y=>20, :astronauts=>{1=>25, 2=>25}},
+          1 => {:type=>1, :x=>130, :y=>20},
+          2 => {:type=>2, :x=>130, :y=>70},
+        }
+      end
+
+      let(:options) do
+        {
+          money: 3000
+        }
+      end
+
+      it "returns a command to connect the one pad to closest module and start a tram" do
+        expect(call).to eq(
+          "TUBE 0 1;POD 42 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1"
+        )
+      end
+    end
+
     context "when called midway in Example 5 (pairs)" do
       let(:buildings) do
         {
@@ -54,8 +76,7 @@ RSpec.describe Controller, instance_name: :controller do
 
       it "returns a simple command to only link pads to same-color modules" do
         expect(call).to eq(
-          "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2;TUBE 5 0;TUBE 5 2;TUBE 5 4;" \
-          "POD 43 5 0 5 2 5 4 5 0 5 2 5 4 5 0 5 2 5 4"
+          "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2"
         )
       end
     end

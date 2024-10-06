@@ -6,17 +6,17 @@ The definitive layout of the city hasn't been fully determined yet, so the archi
 After your victory in the planetary programming games, you were the first to be called to design the artificial intelligence that will develop the first transportation network on the moon.
 
 ## Rules
-The game is played in 20 lunar months of 20 days each.
+The game is played in *20* lunar months of *20* days each.
 
 At the beginning of each month, you will receive resources as well as the list of new buildings constructed in Selenia City. You will then need to use your resources efficiently to connect the new buildings to the network, or reinforce the existing infrastructure.
 
-Transportation modes
+## Transportation modes
 There are two transportation modes on the lunar base: magnetic tubes and teleporters.
 
 ### Tubes
 Magnetic tubes are built on the lunar ground and allow transport pods to carry astronauts through them. They are built in a straight line between two buildings and are bidirectional.
 
-Two tubes cannot cross each other, and each building can only be connected to at most 5 magnetic tubes. A magnetic tube cannot pass through a building without stopping there.
+Two tubes cannot cross each other, and each building can only be connected to **at most 5** magnetic tubes. A magnetic tube cannot pass through a building without stopping there.
 
 Initially, each tube can only accommodate a single pod at a time, which takes an entire day to travel through it (regardless of its length) while carrying a maximum of 10 passengers. It is however possible to upgrade tubes so they can be traversed by several pods simultaneously.
 
@@ -39,7 +39,7 @@ There are several different types of lunar modules (laboratory, ground sampling 
 You need to transport each astronaut to a building of the corresponding type in order to win points. There may exist several modules of the same type in Selenia City.
 
 ### Landing pads
-20 astronauts delivered on a landing pad
+
 Landing pads are buildings that work in a special way: at the beginning of each month, a rocket will drop a group of astronauts on each of them. The composition of the group is fixed: if for example a landing pad welcomes 5 lab technicians and 10 observatory employees, an identical group will arrive each month.
 
 If several lunar modules have the same type as the astronaut, he may settle into any of them.
@@ -47,7 +47,6 @@ If several lunar modules have the same type as the astronaut, he may settle into
 Your solution will score more points if it manages to balance the astronaut population well between modules of the same type
 
 ## Scoring
-Scoring
 Your objective is to score as many points as possible before the end of the simulation.
 
 Each astronaut reaching its target before the end of the lunar month will give you up to 100 points:
@@ -55,12 +54,13 @@ Each astronaut reaching its target before the end of the lunar month will give y
 For speed: 50 points, from which are deducted the number of days needed by the astronaut to reach the destination.
 For balancing the population: 50 points, from which are deducted the number of astronauts who have already reached the same module during the current lunar month. If it's negative, this score will be brought back to 0.
 
-Example 1 : An astronaut of type 4 arrives in Selenia City on the first day of the month, and immediately takes a teleporter that takes her from the landing pad to a building of type 4.
+### Example 1:
+An astronaut of type 4 arrives in Selenia City on the first day of the month, and immediately takes a teleporter that takes her from the landing pad to a building of type 4.
 
 She is the first one to reach her base, you will score 100 points (50 speed points and 50 balancing points).
 
-
-Example 2 : An astronaut takes a pod through a magnetic tube on the first day to leave his landing pad, then a teleporter followed by another tube on the second day. He reaches his module as 60 astronauts have previously been installed in this building during that month.
+### Example 2:
+An astronaut takes a pod through a magnetic tube on the first day to leave his landing pad, then a teleporter followed by another tube on the second day. He reaches his module as 60 astronauts have previously been installed in this building during that month.
 
 He will earn you 48 points (48 speed points and no balancing point).
 
@@ -70,34 +70,32 @@ Each lunar month happens in 4 stages :
 1. City parsing
 At the beginning of each month, your code receives information about new constructions in Selenia City.
 
-On the first line, an integer resources representing the total amount of resources you currently have.
-On the next line, an integer numTravelRoutes, the number of routes (tubes or teleporters) currently present in the city.
-On the next numTravelRoutes lines, the description of a tube or teleporter as a list of three space-separated integers buildingId1, buildingId2 and capacity:
+* On the first line, an integer resources representing the total amount of resources you currently have.
+* On the next line, an integer numTravelRoutes, the number of routes (tubes or teleporters) currently present in the city.
+* On the next numTravelRoutes lines, the description of a tube or teleporter as a list of three space-separated integers buildingId1, buildingId2 and capacity:
 buildingId1 and buildingId2 are the ends of the tube or teleporter.
 capacity equals 0 if the route is a teleporter, and represents the capacity of the tube otherwise.
-On the next line, an integer numPods, the number of transport pods currently present in the network of magnetic tubes.
-On the next numPods lines, the description of a pod as a list of space-separated integers:
+* On the next line, an integer numPods, the number of transport pods currently present in the network of magnetic tubes.
+* On the next numPods lines, the description of a pod as a list of space-separated integers:
 The first integer is the unique identifier of the pod.
 The second integer is the number numStops of stops in the pod's path.
 The next numStops integers represent the pod's path, i.e. the identifiers of each building on its itinerary.
-On the next line, an integer numNewBuildings, the number of buildings that have just been constructed.
-On the next numNewBuildings lines, the description of a new building, as a list of space-separated integers. The format of each line depends on the building type:
-If the building is a landing pad: 0 buildingId coordX coordY numAstronauts astronautType1 astronautType2 ...
-Otherwise, the first number is positive and the building is a lunar module: moduleType buildingId coordX coordY
+* On the next line, an integer numNewBuildings, the number of buildings that have just been constructed.
+* On the next numNewBuildings lines, the description of a new building, as a list of space-separated integers. The format of each line depends on the building type:
+* * If the building is a landing pad: 0 buildingId coordX coordY numAstronauts astronautType1 astronautType2 ...
+* * Otherwise, the first number is positive and the building is a lunar module: moduleType buildingId coordX coordY
 Here's an example of input data which could be provided to your program at the beginning of its turn, with an explanation of each line:
 
 2. Transport infrastructure improvements
 Your code can then transform the city through actions that allow you to build and improve its transportation network.
 
-Allowed actions
-Click for details
-
-TUBE buildingId1 buildingId2: create a magnetic tube between two buildings. The cost is 1 resource for each 0.1km of tube installed, rounded down.
-UPGRADE buildingId1 buildingId2: increase the capacity of a tube by 1. You will need to spend the initial construction cost multiplied by the new capacity. For example, if a tube initially cost 500 resources to build, you have to spend 1000 resources to improve its capacity to 2 pods, then 1500 resources for 3 pods, etc.
-TELEPORT buildingIdEntrance buildingIdExit: build a teleporter. This action costs 5,000 resources.
-POD podId buildingId1 buildingId2 buildingId3 ...: create a transport pod and define its path. The pod identifier must be included between 1 and 500. If the last stop is the same as the first, the pod will loop around the path indefinitely, otherwise it will remain in place after reaching its last stop. This action costs 1,000 resources.
-DESTROY podId: deconstruct a transport pod. This action gives you 750 resources back.
-WAIT: don't perform any action this turn.
+Allowed actions:
+* TUBE buildingId1 buildingId2: create a magnetic tube between two buildings. The cost is 1 resource for each 0.1km of tube installed, rounded down.
+* UPGRADE buildingId1 buildingId2: increase the capacity of a tube by 1. You will need to spend the initial construction cost multiplied by the new capacity. For example, if a tube initially cost 500 resources to build, you have to spend 1000 resources to improve its capacity to 2 pods, then 1500 resources for 3 pods, etc.
+* TELEPORT buildingIdEntrance buildingIdExit: build a teleporter. This action costs 5,000 resources.
+* POD podId buildingId1 buildingId2 buildingId3 ...: create a transport pod and define its path. The pod identifier must be included between 1 and 500. If the last stop is the same as the first, the pod will loop around the path indefinitely, otherwise it will remain in place after reaching its last stop. This action costs 1,000 resources.
+* DESTROY podId: deconstruct a transport pod. This action gives you 750 resources back.
+* WAIT: don't perform any action this turn.
 In order to execute several actions during the same game turn, you can separate them with a semicolon like this: TELEPORT 12 34;TUBE 23 45;UPGRADE 23 45.
 
 If an action is impossible (lacking sufficient resources, or if building a tube would cross the path of another for example), it will be ignored and a warning will display in the game console. In order to determine which actions have been performed successfully, your code can use the input data provided at the beginning of the following month.
@@ -135,4 +133,4 @@ At most 1000 astronauts will arrive each month.
 It is guaranteed that no building will be constructed on the path of an existing tube.
 Your program has to return its list of actions within 500 milliseconds each turn (1000 milliseconds for the first turn).
 It is guaranteed that each astronaut arriving on a landing pad will have at least 1 module of the same type already built.
-Note: hidden validators, on which the score of your solution is evaluated on the leaderboard, will be changed between the challenge's end and the final score calculation in order to avoid hardcoded solutions. It is however guaranteed that hidden validators will be similar to the visible testcases.
+

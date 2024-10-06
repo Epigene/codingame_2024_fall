@@ -1,6 +1,7 @@
 class Controller
   POD_COST = 1_000
   TP_COST = 5_000
+  MAX_BUILDINGS = 150
   MAX_TUBES = 5 # per node. + 1 teleporter possibly
 
   attr_reader :buildings # Hash of id => {type: 0, x: bd[2], y: bd[3], astronauts: astronauts} pairs
@@ -15,12 +16,16 @@ class Controller
 
   # @param buildings [Hash] allows setting the game-state to whatever move with previous buildings
   def initialize(buildings: {})
-    @buildings = buildings
-    @pads = [].to_set
-    @modules = [].to_set
-    @buildings_by_type = Hash.new { |h, k| h[k] = Set.new }
+    time = Benchmark.realtime do
+      @buildings = buildings
+      @pads = [].to_set
+      @modules = [].to_set
+      @buildings_by_type = Hash.new { |h, k| h[k] = Set.new }
 
-    initialize_building_list!
+      initialize_building_list!
+    end
+
+    debug("Took #{(time * 1000).round}ms to initialize", 0)
   end
 
   # @param money [Integer]
@@ -30,63 +35,76 @@ class Controller
   #
   # @return [String] the improvement command(s) to undertake
   def call(money:, connections: [], pods: {}, new_buildings: [])
-    @commands = []
-    @money = money
-    @connections = connections
-    @pods = pods
-    @new_buildings = new_buildings
+    time = Benchmark.realtime do
+      @commands = []
+      @money = money
+      @connections = connections
+      @pods = pods
+      @new_buildings = new_buildings
 
-    update_building_list!(new_buildings)
+      update_building_list!(new_buildings)
 
-    connect_pad_to_modules
+      connect_pads_to_modules
 
-    commands.any? ? commands.join(";") : "WAIT"
+      @command = commands.any? ? commands.join(";") : "WAIT"
+    end
+
+    debug("Took #{(time * 1000).round}ms to execute", 0)
+
+    @command
   end
 
   private
 
   # VERY naive strat, connects pads directly to modules of matching color nauts.
-  def connect_pad_to_modules
+  def connect_pads_to_modules
     pads.each do |id|
-      connection_options = {}
-
-      modules.each do |module_id|
-        next if _already_connected = connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
-        next if _no_matching_nauts = (buildings[id][:astronauts].keys & [buildings[module_id][:type]]).empty?
-
-        distance = Segment[
-          Point[buildings[id][:x], buildings[id][:y]],
-          Point[buildings[module_id][:x], buildings[module_id][:y]]
-        ].length
-
-        cost = (distance * 10).floor
-
-        conn_fragment = "#{id} #{module_id}"
-        connection_options[conn_fragment] = {cost: cost}
-        debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{cost}")
+      time = Benchmark.realtime do
+        connect_pad_to_modules(id)
       end
-
-      next if connection_options.none?
-
-      conn_fragments = []
-      money_after_pod = money - POD_COST
-      connection_options.sort_by { |k, data| data[:cost] }.first(5).each do |k, data|
-        break if _too_expensive = (money_after_pod - data[:cost]).negative?
-
-        money_after_pod -= data[:cost]
-        conn_fragments << k
-      end
-
-      next if conn_fragments.none?
-
-      conn_fragments.each do |fragment|
-        commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
-      end
-
-      scaling = 20/conn_fragments.size
-      command = "POD #{42+pods.size} #{(conn_fragments * (scaling / 2).floor).join(" ")}"
-      commit_purchase(command, cost: POD_COST)
+      debug("Processing pad##{id} took #{(time * 1000).round}ms", 0)
     end
+  end
+
+  def connect_pad_to_modules(id)
+    connection_options = {}
+
+    modules.each do |module_id|
+      next if _already_connected = connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
+      next if _no_matching_nauts = (buildings[id][:astronauts].keys & [buildings[module_id][:type]]).empty?
+
+      distance = Segment[
+        Point[buildings[id][:x], buildings[id][:y]],
+        Point[buildings[module_id][:x], buildings[module_id][:y]]
+      ].length
+
+      cost = (distance * 10).floor
+
+      conn_fragment = "#{id} #{module_id}"
+      connection_options[conn_fragment] = {cost: cost}
+      debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{cost}")
+    end
+
+    return if connection_options.none?
+
+    conn_fragments = []
+    money_after_pod = money - POD_COST
+    connection_options.sort_by { |k, data| data[:cost] }.first(5).each do |k, data|
+      break if _too_expensive = (money_after_pod - data[:cost]).negative?
+
+      money_after_pod -= data[:cost]
+      conn_fragments << k
+    end
+
+    return if conn_fragments.none?
+
+    conn_fragments.each do |fragment|
+      commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
+    end
+
+    scaling = 20/conn_fragments.size
+    command = "POD #{42+pods.size} #{(conn_fragments * (scaling / 2).floor).join(" ")}"
+    commit_purchase(command, cost: POD_COST)
   end
 
   def commit_purchase(command, cost:)
@@ -128,6 +146,7 @@ class Controller
 
     debug("Buildings on map:")
     buildings.each_pair do |id, data|
+      next if id < 130
       debug("  #{id} => #{data},")
     end
 

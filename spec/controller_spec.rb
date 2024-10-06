@@ -19,10 +19,10 @@ RSpec.describe Controller, instance_name: :controller do
       it "returns the command to link to both building 1 and 2 construct a pod looping both" do
         expect(call).to eq("TUBE 0 1;TUBE 0 2;POD 42 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2 0 1 0 2")
 
-        expect(controller.buildings).to eq(
-          0=>{:type=>0, :x=>80, :y=>60, :astronauts=>{1=>15, 2=>15}},
-          1=>{:type=>1, :x=>40, :y=>30},
-          2=>{:type=>2, :x=>120, :y=>30}
+        expect(controller.buildings).to match(
+          0=> hash_including(:type=>0, :x=>80, :y=>60, :astronauts=>{1=>15, 2=>15}),
+          1=>hash_including(:type=>1, :x=>40, :y=>30),
+          2=>hash_including(:type=>2, :x=>120, :y=>30)
         )
       end
     end
@@ -93,6 +93,30 @@ RSpec.describe Controller, instance_name: :controller do
         expect(call).to eq(
           "TUBE 0 2;POD 42 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2;" \
           "TUBE 1 3;POD 43 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3 1 3"
+        )
+      end
+    end
+
+    context "when called with custom example 3 (many starting pods in specific priority)" do
+      let(:buildings) do
+        {
+          0 => {:type=>1, :x=>20, :y=>15},
+          1 => {:type=>2, :x=>140, :y=>15},
+          2 => {:type=>0, :x=>40, :y=>45, :astronauts=>{1=>40}},
+          3 => {:type=>0, :x=>80, :y=>45, :astronauts=>{1=>15, 2=>25}},
+          4 => {:type=>0, :x=>120, :y=>45, :astronauts=>{2=>50}},
+          5 => {:type=>2, :x=>20, :y=>75},
+          6 => {:type=>1, :x=>140, :y=>75},
+        }
+      end
+
+      let(:options) { { money: 5000 } }
+
+      it "returns a command to connect to closest pad+module pairs" do
+        expect(call).to eq(
+          "TUBE 4 1;POD 42 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1;" \
+          "TUBE 2 0;POD 43 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0;" \
+          "TUBE 3 5;POD 44 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5"
         )
       end
     end

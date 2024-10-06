@@ -116,12 +116,11 @@ class Controller
       conn_fragments << k
     end
 
+    # using only as many connections as there are astronaut types arriving
+    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size).first(MAX_TUBES)
     return if conn_fragments.none?
 
-    # using only as many connections as there are astronaut types arriving
-    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size)
-
-    conn_fragments.first(buildings[id][:astronauts].keys.size).each do |fragment|
+    conn_fragments.each do |fragment|
       commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
     end
 

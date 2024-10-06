@@ -70,7 +70,9 @@ class Controller
   end
 
   def connect_pad_to_modules(id)
-    if one_type_pad_already_connected?(buildings[id])
+    pad = buildings[id]
+
+    if one_type_pad_already_connected?(pad)
       debug("Pad##{id} seems to already have a connection to same-color module")
       return
     end
@@ -78,12 +80,12 @@ class Controller
     connection_options = {}
 
     modules.each do |module_id|
-      next if _no_matching_nauts = (buildings[id][:astronauts].keys & [buildings[module_id][:type]]).empty?
-      next if _already_connected = connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
+      house = buildings[module_id]
+      next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
+      next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
 
       distance = Segment[
-        Point[buildings[id][:x], buildings[id][:y]],
-        Point[buildings[module_id][:x], buildings[module_id][:y]]
+        Point[pad[:x], pad[:y]], Point[house[:x], house[:y]]
       ].length
 
       cost = (distance * 10).floor
@@ -91,13 +93,14 @@ class Controller
       conn_fragment = "#{id} #{module_id}"
 
       # naive for now, simply the number of nauts to move
-      point_potential = buildings[id][:astronauts][buildings[module_id][:type]]
+      point_potential = pad[:astronauts][house[:type]]
       point_ratio = (point_potential.to_f / cost.to_f).round(4)
 
       connection_options[conn_fragment] = {
+        module_id: module_id,
         cost: cost, point_potential: point_potential,
         point_ratio: point_ratio,
-        existing_connections: buildings[module_id].fetch(:connections, {}).fetch(:in, {}).size
+        existing_connections: house.fetch(:connections, {}).fetch(:in, {}).size
       }
       debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{cost}")
     end
@@ -107,13 +110,18 @@ class Controller
     conn_fragments = []
     money_after_pod = money - POD_COST
 
+    types_connected = []
     connection_options.sort_by do |k, data|
       [-data[:point_ratio], data[:cost], data[:existing_connections]]
     end.each do |k, data|
       next if _too_expensive = (money_after_pod - data[:cost]).negative?
 
+      type = buildings[data[:module_id]][:type]
+      next if _type_already_connected = types_connected.include?(type)
+
       money_after_pod -= data[:cost]
       conn_fragments << k
+      types_connected << buildings[data[:module_id]][:type]
     end
 
     # using only as many connections as there are astronaut types arriving

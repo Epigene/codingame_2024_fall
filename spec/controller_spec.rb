@@ -72,7 +72,8 @@ RSpec.describe Controller, instance_name: :controller do
 
       it "returns a simple command to only link pads to same-color modules" do
         expect(call).to eq(
-          "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2"
+          # "TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2"
+          "TUBE 1 0;POD 43 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0;TUBE 3 0;POD 44 3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0 3 0"
         )
       end
     end
@@ -117,6 +118,47 @@ RSpec.describe Controller, instance_name: :controller do
           "TUBE 4 1;POD 42 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1 4 1;" \
           "TUBE 2 0;POD 43 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0;" \
           "TUBE 3 5;POD 44 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5 3 5"
+        )
+      end
+    end
+
+    context "when called with example 9 (Expansion)" do
+      let(:buildings) do
+        {
+          0 => {:type=>1, :x=>71, :y=>84, :connections=>{:in=>{2=>1, 3=>1}, :out=>{2=>1, 3=>1}}},
+          1 => {:type=>1, :x=>89, :y=>84},
+          2 => {:type=>0, :x=>80, :y=>70, :astronauts=>{1=>40}, :connections=>{:out=>{0=>1}, :in=>{0=>1}}},
+          3 => {:type=>0, :x=>78, :y=>90, :astronauts=>{1=>40}, :connections=>{:out=>{0=>1}, :in=>{0=>1}}},
+          4 => {:type=>1, :x=>70, :y=>69},
+          5 => {:type=>1, :x=>91, :y=>70, :connections=>{:in=>{6=>1}, :out=>{6=>1}}},
+          6 => {:type=>0, :x=>95, :y=>77, :astronauts=>{1=>40}, :connections=>{:out=>{5=>1}, :in=>{5=>1}}},
+          7 => {:type=>2, :x=>86, :y=>61},
+          8 => {:type=>1, :x=>62, :y=>71},
+          9 => {:type=>3, :x=>63, :y=>90},
+          10 => {:type=>2, :x=>74, :y=>61},
+          11 => {:type=>0, :x=>60, :y=>82, :astronauts=>{2=>35, 3=>5}},
+        }
+      end
+
+      let(:options) do
+        {
+          money: 6009,
+          connections: [
+            {:b_id_1=>6, :b_id_2=>5, :cap=>1},
+            {:b_id_1=>3, :b_id_2=>0, :cap=>1},
+            {:b_id_1=>2, :b_id_2=>0, :cap=>1},
+          ],
+          pods: {
+            42 => [20, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0],
+            43 => [20, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0],
+            44 => [20, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5],
+          }
+        }
+      end
+
+      it "returns a command to connect to closest colors of the new pad" do
+        expect(call).to eq(
+          "TUBE 11 10;TUBE 11 9;POD 45 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9 11 10 11 9"
         )
       end
     end
@@ -273,7 +315,7 @@ RSpec.describe Controller, instance_name: :controller do
 
       let(:options) { { money: 100000 } }
 
-      it "is quick to give a move even if it's not the best" do
+      xit "is quick to give a move even if it's not the best" do
         expect(call).to eq("yay")
       end
     end

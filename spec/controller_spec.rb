@@ -250,6 +250,27 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
+    context "when called with custom example 4 (pad cluster)" do
+      let(:buildings) do
+        {
+          0 => {:type=>0, :x=>70, :y=>30, :astronauts=>{1=>10}},
+          1 => {:type=>0, :x=>90, :y=>45, :astronauts=>{1=>5}},
+          2 => {:type=>0, :x=>70, :y=>60, :astronauts=>{1=>5}},
+          3 => {:type=>1, :x=>150, :y=>45},
+        }
+      end
+
+      let(:options) { { money: 2500 } }
+
+      it "returns an advanced command to connect closest pad of a cluster to remote module" do
+        expect(call).to eq(
+          "TUBE 1 4;" \
+          "TUBE 1 0;" \
+          "TUBE 1 2;POD 42 1 0 1 4 1 2 1 4 1 0 1 4 1 2 1 4"
+        )
+      end
+    end
+
     context "when called with example 9 (Expansion)" do
       let(:buildings) do
         {

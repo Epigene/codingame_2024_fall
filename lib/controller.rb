@@ -72,7 +72,7 @@ class Controller
       time = Benchmark.realtime do
         redo_underutilized_pod(id, data)
       end
-      debug("Processing underutilized_pod##{id} took #{(time * 1000).round}ms", 0)
+      report_time(time, "process underutilized_pod##{id}")
     end
 
     nil
@@ -114,7 +114,7 @@ class Controller
       time = Benchmark.realtime do
         connect_pad_to_modules(id)
       end
-      debug("Processing pad##{id} took #{(time * 1000).round}ms", 0)
+      report_time(time, "process pad#{id} connecting")
     end
   end
 

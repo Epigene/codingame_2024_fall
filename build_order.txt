@@ -1,5 +1,6 @@
 lib/requires.rb
-lib/geometry.rb
+lib/point.rb
+lib/segment.rb
 lib/weighted_graph.rb
 lib/controller.rb
 lib/game_init.rb

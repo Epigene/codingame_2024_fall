@@ -1,48 +1,3 @@
-# Point class to represent a point in 2D space
-class Point
-  attr_reader :x, :y
-
-  def self.[](p1, p2)
-    new(p1, p2)
-  end
-
-  def initialize(x, y)
-    @x = x
-    @y = y
-  end
-
-  def to_s
-    "P[#{x}, #{y}]"
-  end
-
-  def inspect
-    to_s
-  end
-
-  def distance_to(other_point)
-    Segment[self, other_point].length
-  end
-
-  # add a transposition vector to a point to get its new location
-  def +(vector)
-    self.class[x + vector.x, y + vector.y]
-  end
-
-  def ==(other)
-    return false unless other.is_a?(Point)
-
-    x == other.x && y == other.y
-  end
-
-  def eql?(other)
-    self == other
-  end
-
-  def hash
-    [x, y].hash
-  end
-end
-
 # Segment class to represent a line segment in 2D space
 class Segment
   attr_reader :p1, :p2
@@ -146,8 +101,7 @@ class Segment
 
   # Helper function to check if point p3 lies on line segment p1p2 (for collinear case)
   def on_segment?(p1, p2, p3)
-    p3.x >= [p1.x, p2.x].min && p3.x <= [p1.x, p2.x].max &&
-    p3.y >= [p1.y, p2.y].min && p3.y <= [p1.y, p2.y].max
+    p3.on_segment?(p1, p2)
   end
 
   # @return [Integer 1..8] the section of pie the angle is pointing in

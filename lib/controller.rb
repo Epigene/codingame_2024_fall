@@ -148,6 +148,7 @@ class Controller
 
     modules.each do |module_id|
       house = buildings[module_id]
+      next if !vision?(from: id, to: module_id)
       next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
       next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
 
@@ -173,6 +174,17 @@ class Controller
     end
 
     connection_options
+  end
+
+  # Vision can be interfered with by other nodes on visibility line, and by tubes crossing
+  #
+  # @param from/to [Id] node id
+  def vision?(from:, to:)
+    binding.pry
+    return false if obscured_by_other_node?
+    return false if obscured_by_tube?
+
+    true
   end
 
   def connect_pad_to_modules(id)

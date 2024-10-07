@@ -148,7 +148,11 @@ class Controller
 
     modules.each do |module_id|
       house = buildings[module_id]
-      next if can_receive_tp && building_has_teleport?(module_id)
+      if can_receive_tp && building_has_teleport?(module_id)
+        next
+      elsif !can_receive_tp && check_vision && building_tube_connections_maxed?(module_id)
+        next
+      end
       next if check_vision && !vision?(from: id, to: module_id)
       next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
       next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
@@ -175,6 +179,10 @@ class Controller
     end
 
     connection_options
+  end
+
+  def building_tube_connections_maxed?(module_id)
+    buildings[module_id].fetch(:connections, {}).fetch(:in, {}).values.count(&:positive?) >= MAX_TUBES
   end
 
   def connect_pad_to_modules(id)

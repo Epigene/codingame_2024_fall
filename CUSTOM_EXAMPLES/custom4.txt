@@ -1,0 +1,10 @@
+# Custom Example 4, designed to check cluster detection and shortest-only long connection making
+1
+4 2500
+0 70 30
+1 1 1 1 1 1 1 1 1 1
+0 90 45
+1 1 1 1 1
+0 70 60
+1 1 1 1 1
+1 150 45

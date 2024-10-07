@@ -92,6 +92,35 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
+    context "when called midway in Example 2 with enough money for a TP" do
+      let(:buildings) do
+        {
+          0 => {:type=>0, :x=>30, :y=>20, :astronauts=>{1=>25, 2=>25}, :connections=>{:out=>{1=>1, 2=>1}, :in=>{1=>1, 2=>1}}},
+          1 => {:type=>1, :x=>130, :y=>20, :connections=>{:in=>{0=>1}, :out=>{0=>1}}},
+          2 => {:type=>2, :x=>130, :y=>70, :connections=>{:in=>{0=>1, 3=>1}, :out=>{0=>1, 3=>1}}},
+          3 => {:type=>0, :x=>30, :y=>70, :astronauts=>{1=>40, 2=>10}, :connections=>{:out=>{2=>1}, :in=>{2=>1}}},
+        }
+      end
+
+      let(:options) do
+        {
+          money: 5636, connections: [
+            {:b_id_1=>3, :b_id_2=>2, :cap=>1},
+            {:b_id_1=>0, :b_id_2=>1, :cap=>1},
+            {:b_id_1=>0, :b_id_2=>2, :cap=>1}
+          ],
+          pods: {
+            42 => [21, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0],
+            43 => [20, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2],
+          }
+        }
+      end
+
+      it "returns the simple fallback command to build a TP" do
+        expect(call).to eq("TELEPORT 3 1")
+      end
+    end
+
     context "when called midway in Example 5 (pairs)" do
       let(:buildings) do
         {

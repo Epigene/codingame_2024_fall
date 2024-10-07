@@ -12,7 +12,7 @@ loop do
     building_id_1, building_id_2, cap = gets.split.map(&:to_i)
     route = {b_id_1: building_id_1, b_id_2: building_id_2, cap: cap}
     connections << route
-    debug("  #{route}")
+    debug("  #{route},")
   end
 
   num_pods = gets.to_i

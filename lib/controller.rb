@@ -12,7 +12,7 @@ class Controller
   attr_reader :modules # Set of module ids to look up in :buildings hash
 
   attr_accessor :money
-  attr_reader :connections #
+  attr_reader :connections # Array<Hash> # [{:b_id_1=>3, :b_id_2=>2, :cap=>1}]
   attr_reader :pods, :new_buildings
   attr_reader :commands # a mutable array to collect the various moves
 
@@ -55,6 +55,7 @@ class Controller
 
       redo_underutilized_pods
       connect_pads_to_modules
+      build_teleports
 
       @command = commands.any? ? commands.join(";") : "WAIT"
     end
@@ -105,29 +106,6 @@ class Controller
     end
   end
 
-  def pod_underutilized?(data)
-    root = data[1]
-    unique_stops = data[1..].uniq - [root]
-
-    return if unique_stops.size >= 4
-
-    untransfered = buildings[root][:astronauts].dup
-
-    unique_stops.each do |module_id|
-      untransfered[buildings[module_id][:type]] = 0
-    end
-
-    untransfered.values.sum / buildings[root][:astronauts].values.sum.to_f >= 0.4
-  end
-
-  # @param id [Id] Pad building id
-  def pad_unconnected_types(id)
-    pad = buildings[id]
-    connected_types = pad.fetch(:connections, {}).fetch(:out, {}).keys.map { buildings[_1][:type] }
-
-    pad[:astronauts].keys - connected_types
-  end
-
   # VERY naive strat, connects pads directly to modules of matching color nauts.
   def connect_pads_to_modules
     pads_by_potential.each do |id|
@@ -140,15 +118,37 @@ class Controller
     end
   end
 
+  def build_teleports
+    pads_by_potential.each do |id|
+      next if money < TP_COST
+      next if building_has_teleport?(id)
+
+      # pad = buildings[id]
+      types = pad_unconnected_types(id)
+      next if types.none?
+
+      options = connection_options(id, buildings_by_type[types.first], check_vision: false)
+
+      next if options.none?
+
+      fragment, _meta = options.sort_by do |k, data|
+        [data[:existing_connections], -data[:cost]]
+      end.first
+
+      command = "TELEPORT #{fragment}"
+      commit_purchase(command, cost: TP_COST)
+    end
+  end
+
   # @param id [Id] # pad id
   # @return Hash # { "0 1" => {metadata}, ..}
-  def connection_options(id, module_ids)
+  def connection_options(id, module_ids, check_vision: true)
     pad = buildings[id]
     connection_options = {}
 
     modules.each do |module_id|
       house = buildings[module_id]
-      next if !vision?(from: id, to: module_id)
+      next if check_vision && !vision?(from: id, to: module_id)
       next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
       next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
 
@@ -174,42 +174,6 @@ class Controller
     end
 
     connection_options
-  end
-
-  # Vision can be interfered with by other nodes on visibility line, and by tubes crossing
-  #
-  # @param from/to [Id] node id
-  def vision?(from:, to:)
-    vision_segment = Segment[
-      Point[buildings[from][:x], buildings[from][:y]],
-      Point[buildings[to][:x], buildings[to][:y]]
-    ]
-
-    obscured_by_other_node = buildings.except(from, to).find do |id, data|
-      Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
-    end
-
-    return false if obscured_by_other_node
-
-    obscured_by_tube = connections.find do |conn|
-      next if conn[:cap].zero?
-
-      # tubes originating from either point cannot obscure path between them
-      next if ([from, to] & [conn[:b_id_1], conn[:b_id_2]]).any?
-
-      b1 = buildings[conn[:b_id_1]]
-      b2 = buildings[conn[:b_id_2]]
-
-      tube_segment = Segment[
-        Point[b1[:x], b1[:y]], Point[b2[:x], b2[:y]]
-      ]
-
-      vision_segment.intersect?(tube_segment)
-    end
-
-    return false if obscured_by_tube
-
-    true
   end
 
   def connect_pad_to_modules(id)
@@ -254,6 +218,42 @@ class Controller
     commit_purchase(command, cost: POD_COST)
   end
 
+    # Vision can be interfered with by other nodes on visibility line, and by tubes crossing
+  #
+  # @param from/to [Id] node id
+  def vision?(from:, to:)
+    vision_segment = Segment[
+      Point[buildings[from][:x], buildings[from][:y]],
+      Point[buildings[to][:x], buildings[to][:y]]
+    ]
+
+    obscured_by_other_node = buildings.except(from, to).find do |id, data|
+      Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
+    end
+
+    return false if obscured_by_other_node
+
+    obscured_by_tube = connections.find do |conn|
+      next if conn[:cap].zero?
+
+      # tubes originating from either point cannot obscure path between them
+      next if ([from, to] & [conn[:b_id_1], conn[:b_id_2]]).any?
+
+      b1 = buildings[conn[:b_id_1]]
+      b2 = buildings[conn[:b_id_2]]
+
+      tube_segment = Segment[
+        Point[b1[:x], b1[:y]], Point[b2[:x], b2[:y]]
+      ]
+
+      vision_segment.intersect?(tube_segment)
+    end
+
+    return false if obscured_by_tube
+
+    true
+  end
+
   # @param root [Id]
   # @param modules Array<id>
   def pod_route_from_fragments(root, modules)
@@ -275,6 +275,9 @@ class Controller
       ids = command.split(" ").last(2).map(&:to_i)
       ensure_connection(*ids, cap: 1)
       ensure_connection(*ids.reverse, cap: 1)
+    elsif command.start_with?("TELE")
+      ids = command.split(" ").last(2).map(&:to_i)
+      ensure_connection(*ids, cap: 0)
     end
 
     debug("Committing to building #{command} at a cost of #{cost}, leaving #{self.money} in the bank")
@@ -332,6 +335,34 @@ class Controller
   # @return [Array<Id>]
   def pads_by_potential
     pads.sort_by { -buildings[_1][:astronauts].values.max }
+  end
+
+  def pod_underutilized?(data)
+    root = data[1]
+    unique_stops = data[1..].uniq - [root]
+
+    return if unique_stops.size >= 4
+
+    untransfered = buildings[root][:astronauts].dup
+
+    unique_stops.each do |module_id|
+      untransfered[buildings[module_id][:type]] = 0
+    end
+
+    untransfered.values.sum / buildings[root][:astronauts].values.sum.to_f >= 0.4
+  end
+
+  # @param id [Id] Pad building id
+  # @return [Array<Integer>] # a sorted array of types lacking connections
+  def pad_unconnected_types(id)
+    pad = buildings[id]
+    connected_types = pad.fetch(:connections, {}).fetch(:out, {}).keys.map { buildings[_1][:type] }
+
+    (pad[:astronauts].keys - connected_types).sort_by { pad[:astronauts][_1] }
+  end
+
+  def building_has_teleport?(id)
+    buildings[id].fetch(:connections, {}).fetch(:out, {}).values.any?(&:zero?)
   end
 
   def initialize_building_list!

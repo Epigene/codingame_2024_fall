@@ -118,6 +118,48 @@ class Controller
     end
   end
 
+  def connect_pad_to_modules(id)
+    pad = buildings[id]
+
+    if one_type_pad_already_connected?(pad)
+      debug("Pad##{id} seems to already have a connection to same-color module")
+      return
+    end
+
+    connection_options = connection_options(id, modules)
+
+    return if connection_options.none?
+
+    conn_fragments = []
+    money_after_pod = money - POD_COST
+
+    types_connected = []
+    connection_options.sort_by do |k, data|
+      [-data[:point_ratio], data[:cost], data[:existing_connections]]
+    end.each do |k, data|
+      next if _too_expensive = (money_after_pod - data[:cost]).negative?
+
+      type = buildings[data[:module_id]][:type]
+      next if _type_already_connected = types_connected.include?(type)
+
+      money_after_pod -= data[:cost]
+      conn_fragments << k
+      types_connected << buildings[data[:module_id]][:type]
+    end
+
+    # using only as many connections as there are astronaut types arriving
+    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size).first(MAX_TUBES)
+    return if conn_fragments.none?
+
+    conn_fragments.each do |fragment|
+      commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
+    end
+
+    route = pod_route_from_fragments(id, conn_fragments.map { |f| f.split(" ").last.to_i })
+    command = "POD #{42+pods.size} #{route}"
+    commit_purchase(command, cost: POD_COST)
+  end
+
   def build_teleports
     pads_by_tp_potential.each do |id|
       next if money < TP_COST
@@ -183,48 +225,6 @@ class Controller
 
   def building_tube_connections_maxed?(module_id)
     buildings[module_id].fetch(:connections, {}).fetch(:in, {}).values.count(&:positive?) >= MAX_TUBES
-  end
-
-  def connect_pad_to_modules(id)
-    pad = buildings[id]
-
-    if one_type_pad_already_connected?(pad)
-      debug("Pad##{id} seems to already have a connection to same-color module")
-      return
-    end
-
-    connection_options = connection_options(id, modules)
-
-    return if connection_options.none?
-
-    conn_fragments = []
-    money_after_pod = money - POD_COST
-
-    types_connected = []
-    connection_options.sort_by do |k, data|
-      [-data[:point_ratio], data[:cost], data[:existing_connections]]
-    end.each do |k, data|
-      next if _too_expensive = (money_after_pod - data[:cost]).negative?
-
-      type = buildings[data[:module_id]][:type]
-      next if _type_already_connected = types_connected.include?(type)
-
-      money_after_pod -= data[:cost]
-      conn_fragments << k
-      types_connected << buildings[data[:module_id]][:type]
-    end
-
-    # using only as many connections as there are astronaut types arriving
-    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size).first(MAX_TUBES)
-    return if conn_fragments.none?
-
-    conn_fragments.each do |fragment|
-      commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
-    end
-
-    route = pod_route_from_fragments(id, conn_fragments.map { |f| f.split(" ").last.to_i })
-    command = "POD #{42+pods.size} #{route}"
-    commit_purchase(command, cost: POD_COST)
   end
 
   # Vision can be interfered with by other nodes on visibility line, and by tubes crossing

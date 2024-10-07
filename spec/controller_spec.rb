@@ -139,6 +139,40 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
+    context "when called towards the end of Example 4 (Crater)" do
+      let(:buildings) do
+        {
+          0 => {:type=>2, :x=>80, :y=>75, :connections=>{:in=>{1=>0}}},
+          1 => {:type=>0, :x=>80, :y=>15, :astronauts=>{2=>50}, :connections=>{:out=>{0=>0}}},
+          2 => {:type=>0, :x=>110, :y=>45, :astronauts=>{1=>50}, :connections=>{:out=>{3=>1}, :in=>{3=>1}}},
+          3 => {:type=>1, :x=>50, :y=>45, :connections=>{:in=>{2=>1}, :out=>{2=>1}}},
+          4 => {:type=>0, :x=>59, :y=>66, :astronauts=>{3=>50}, :connections=>{:out=>{5=>0}}},
+          5 => {:type=>3, :x=>101, :y=>24, :connections=>{:in=>{4=>0}}},
+          6 => {:type=>4, :x=>101, :y=>66, :connections=>{:in=>{7=>0}}},
+          7 => {:type=>0, :x=>59, :y=>24, :astronauts=>{4=>50}, :connections=>{:out=>{6=>0}}},
+          8 => {:type=>0, :x=>86, :y=>41, :astronauts=>{1=>25, 2=>25, 3=>25, 4=>25}},
+        }
+      end
+
+      let(:options) do
+        {
+          money: 51225, connections: [
+            {:b_id_1=>1, :b_id_2=>0, :cap=>0},
+            {:b_id_1=>7, :b_id_2=>6, :cap=>0},
+            {:b_id_1=>4, :b_id_2=>5, :cap=>0},
+            {:b_id_1=>2, :b_id_2=>3, :cap=>1},
+          ],
+          pods: {
+            42 => [20, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3],
+          }
+        }
+      end
+
+      it "returns a simple command to connect to visible modules" do
+        expect(call).to eq("TUBE 8 5;TUBE 8 3;POD 43 8 5 8 3 8 5 8 3 8 5 8 3 8 5 8 3 8 5 8 3 8")
+      end
+    end
+
     context "when called midway in Example 5 (pairs)" do
       let(:buildings) do
         {

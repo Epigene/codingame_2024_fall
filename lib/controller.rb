@@ -127,7 +127,7 @@ class Controller
       types = pad_unconnected_types(id)
       next if types.none?
 
-      options = connection_options(id, buildings_by_type[types.first], check_vision: false)
+      options = connection_options(id, buildings_by_type[types.first], check_vision: false, can_receive_tp: true)
 
       next if options.none?
 
@@ -142,12 +142,13 @@ class Controller
 
   # @param id [Id] # pad id
   # @return Hash # { "0 1" => {metadata}, ..}
-  def connection_options(id, module_ids, check_vision: true)
+  def connection_options(id, module_ids, check_vision: true, can_receive_tp: nil)
     pad = buildings[id]
     connection_options = {}
 
     modules.each do |module_id|
       house = buildings[module_id]
+      next if can_receive_tp && building_has_teleport?(module_id)
       next if check_vision && !vision?(from: id, to: module_id)
       next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
       next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }

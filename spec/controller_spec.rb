@@ -88,7 +88,7 @@ RSpec.describe Controller, instance_name: :controller do
 
       # TODO, also lay tube from #2 to #1
       it "returns the advanced command of only drawing tube to the visible module #2" do
-        expect(call).to eq("TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2")
+        expect(call).to eq("TUBE 3 2;POD 43 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2")
       end
     end
 

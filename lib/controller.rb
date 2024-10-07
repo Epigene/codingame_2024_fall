@@ -180,9 +180,34 @@ class Controller
   #
   # @param from/to [Id] node id
   def vision?(from:, to:)
-    binding.pry
-    return false if obscured_by_other_node?
-    return false if obscured_by_tube?
+    vision_segment = Segment[
+      Point[buildings[from][:x], buildings[from][:y]],
+      Point[buildings[to][:x], buildings[to][:y]]
+    ]
+
+    obscured_by_other_node = buildings.except(from, to).find do |id, data|
+      Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
+    end
+
+    return false if obscured_by_other_node
+
+    obscured_by_tube = connections.find do |conn|
+      next if conn[:cap].zero?
+
+      # tubes originating from either point cannot obscure path between them
+      next if ([from, to] & [conn[:b_id_1], conn[:b_id_2]]).any?
+
+      b1 = buildings[conn[:b_id_1]]
+      b2 = buildings[conn[:b_id_2]]
+
+      tube_segment = Segment[
+        Point[b1[:x], b1[:y]], Point[b2[:x], b2[:y]]
+      ]
+
+      vision_segment.intersect?(tube_segment)
+    end
+
+    return false if obscured_by_tube
 
     true
   end

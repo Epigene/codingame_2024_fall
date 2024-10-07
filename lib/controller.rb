@@ -119,7 +119,7 @@ class Controller
   end
 
   def build_teleports
-    pads_by_potential.each do |id|
+    pads_by_tp_potential.each do |id|
       next if money < TP_COST
       next if building_has_teleport?(id)
 
@@ -218,7 +218,7 @@ class Controller
     commit_purchase(command, cost: POD_COST)
   end
 
-    # Vision can be interfered with by other nodes on visibility line, and by tubes crossing
+  # Vision can be interfered with by other nodes on visibility line, and by tubes crossing
   #
   # @param from/to [Id] node id
   def vision?(from:, to:)
@@ -273,10 +273,12 @@ class Controller
       pods[id.to_i] = [stops.size, *stops.map(&:to_i)]
     elsif command.start_with?("TUBE")
       ids = command.split(" ").last(2).map(&:to_i)
+      connections << {:b_id_1=>ids.first, :b_id_2=>ids[1], :cap=>1}
       ensure_connection(*ids, cap: 1)
       ensure_connection(*ids.reverse, cap: 1)
     elsif command.start_with?("TELE")
       ids = command.split(" ").last(2).map(&:to_i)
+      connections << {:b_id_1=>ids.first, :b_id_2=>ids[1], :cap=>0}
       ensure_connection(*ids, cap: 0)
     end
 
@@ -330,11 +332,26 @@ class Controller
     buildings_by_type[0]
   end
 
-  # Sorts pads descending by the highest number of any one type of naut arriving
+  # Sorts pads descending by the highest number of any one type of naut arriving, tiebreaking
+  # by preferring pads with lower-id astronauts incoming
   #
   # @return [Array<Id>]
   def pads_by_potential
-    pads.sort_by { -buildings[_1][:astronauts].values.max }
+    pads.sort_by do
+      type, count = buildings[_1][:astronauts].max_by { |_k, v| v }
+
+      [-count, type]
+    end
+  end
+
+  # reverse tiebreak from #pads_by_potential - we want pads with most stranded nauts of higher
+  # type because they will have a harder time getting into pods.
+  def pads_by_tp_potential
+    pads.sort_by do
+      type, count = buildings[_1][:astronauts].max_by { |_k, v| v }
+
+      [-count, -type]
+    end
   end
 
   def pod_underutilized?(data)
@@ -362,7 +379,8 @@ class Controller
   end
 
   def building_has_teleport?(id)
-    buildings[id].fetch(:connections, {}).fetch(:out, {}).values.any?(&:zero?)
+    buildings[id].fetch(:connections, {}).fetch(:out, {}).values.any?(&:zero?) ||
+    buildings[id].fetch(:connections, {}).fetch(:in, {}).values.any?(&:zero?)
   end
 
   def initialize_building_list!

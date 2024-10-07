@@ -121,6 +121,24 @@ RSpec.describe Controller, instance_name: :controller do
       end
     end
 
+    context "when called on 1st turn of Example 4 (Crater)" do
+      let(:buildings) do
+        {
+          0 => {:type=>2, :x=>80, :y=>75},
+          1 => {:type=>0, :x=>80, :y=>15, :astronauts=>{2=>50}},
+          2 => {:type=>0, :x=>110, :y=>45, :astronauts=>{1=>50}},
+          3 => {:type=>1, :x=>50, :y=>45},
+        }
+      end
+
+      let(:options) { { money: 5000 } }
+
+      # TODO, may need 2-step connection logic
+      it "returns the simple command to connect 2-3 because of type precedence" do
+        expect(call).to eq("TUBE 2 3;POD 42 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3 2 3")
+      end
+    end
+
     context "when called midway in Example 5 (pairs)" do
       let(:buildings) do
         {

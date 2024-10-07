@@ -33,15 +33,6 @@ loop do
   num_new_buildings.times do
     building_properties = gets.chomp
     new_buildings << (bd = building_properties.split(" ").map(&:to_i))
-
-    # nauts =
-    #   if bd[5]
-    #     bd[5..].each_with_object(Hash.new(0)) { |num, mem| mem[num] += 1 }
-    #   else
-    #     nil
-    #   end
-
-    # debug("  #{bd[0..4]} #{nauts}")
   end
 
   puts controller.call(money: money, connections: connections, pods: pods, new_buildings: new_buildings)

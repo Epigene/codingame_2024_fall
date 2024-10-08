@@ -16,6 +16,22 @@ class Controller
   attr_reader :pods, :new_buildings
   attr_reader :commands # a mutable array to collect the various moves
 
+  # @param root [Id]
+  # @param fragments [id,Array<id>] # arbitrarily deep nesting of sub-arms
+  # @param single_loop [Boolean] pass `true` when recursing
+  # @raturn String
+  def self.pod_route_from_fragments(root, *fragments)
+    base = fragments.map do |f|
+      if f.is_a?(Array)
+        (["#{root}"] + (f + f.reverse[1..])).join(" ")
+      else
+        "#{root} #{f}"
+      end
+    end.join(" ")
+
+    ([base] * 10).join(" ").split(" ").first(21).join(" ")
+  end
+
   # @param buildings [Hash] allows setting the game-state to whatever move with previous buildings
   def initialize(buildings: {})
     time = Benchmark.realtime do
@@ -61,6 +77,7 @@ class Controller
     end
 
     debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 0)
+    raise("Took too long!") if time > 0.490
 
     @command
   end
@@ -73,6 +90,7 @@ class Controller
         redo_underutilized_pod(id, data)
       end
       report_time(time, "process underutilized_pod##{id}")
+      raise("Redoing a pod took too long") if time > 0.1
     end
 
     nil
@@ -82,15 +100,15 @@ class Controller
     return unless pod_underutilized?(data)
     return if (unconnected_types = pad_unconnected_types(data[1])).none?
 
-    connection_options = unconnected_types.each_with_object({}) do |type, mem|
+    options = unconnected_types.each_with_object({}) do |type, mem|
       mem.merge!(connection_options(data[1], buildings_by_type[type]))
     end
 
-    return if connection_options.none?
+    return if options.none?
 
     money_after_pod = money - REPLACEMENT_COST
 
-    connection_options.sort_by do |k, data|
+    options.sort_by do |k, data|
       [-data[:point_ratio], data[:cost], data[:existing_connections]]
     end.find do |k, d|
       next if _too_expensive = (money_after_pod - d[:cost]).negative?
@@ -101,7 +119,7 @@ class Controller
       commit_destruction(id)
 
       # rebuild route, combining existing and new connection
-      route = pod_route_from_fragments(data[1], _modules = data[2..].uniq - [data[1]] + [d[:module_id]])
+      route = self.class.pod_route_from_fragments(data[1], *_modules = data[2..].uniq - [data[1]] + [d[:module_id]])
       commit_purchase("POD #{id} #{route}", cost: POD_COST)
     end
   end
@@ -125,6 +143,7 @@ class Controller
       debug("Pad##{id} seems to already have a connection to same-color module")
       return
     end
+    return if building_tube_connections_maxed?(id)
 
     connection_options = connection_options(id, modules)
 
@@ -142,9 +161,17 @@ class Controller
       type = buildings[data[:module_id]][:type]
       next if _type_already_connected = types_connected.include?(type)
 
-      money_after_pod -= data[:cost]
-      conn_fragments << k
-      types_connected << buildings[data[:module_id]][:type]
+      alternative = nil# connecting_alternative(id, data[:module_id], data, money_after_pod)
+
+      if alternative.nil?
+        money_after_pod -= data[:cost]
+        conn_fragments << k
+        types_connected << buildings[data[:module_id]][:type]
+      else
+        money_after_pod -= alternative[1][:cost]
+        conn_fragments << (_both_fragments = alternative.first)
+        types_connected << buildings[data[:module_id]][:type]
+      end
     end
 
     # using only as many connections as there are astronaut types arriving
@@ -152,12 +179,76 @@ class Controller
     return if conn_fragments.none?
 
     conn_fragments.each do |fragment|
-      commit_purchase("TUBE #{fragment}", cost: connection_options[fragment][:cost])
+      [fragment].flatten.each do |f|
+        commit_purchase("TUBE #{f}", cost: cost_to_join(*f.split(" ").map(&:to_i)))
+      end
     end
 
-    route = pod_route_from_fragments(id, conn_fragments.map { |f| f.split(" ").last.to_i })
-    command = "POD #{42+pods.size} #{route}"
+    route = self.class.pod_route_from_fragments(
+      id,
+      *conn_fragments.map do |f|
+        if f.respond_to?(:split)
+          f.split(" ").last.to_i
+        else
+          f.join(" ").split(" ")[1..].uniq
+        end
+      end
+    )
+
+    command = "POD #{(pods.keys.max || 41).next} #{route}"
     commit_purchase(command, cost: POD_COST)
+  end
+
+  # Looks for a way to reach target through other pad(s) on the way with same-color nauts
+  #
+  # @return [Array<array>, nil] # [[fragment1, fragment2], { cost: ..}]
+  def connecting_alternative(pad_id, target_module_id, data, available_money)
+    pad = buildings[pad_id]
+    closer_stops = {}
+
+    (pads - [pad_id]).each do |other_pad_id|
+      closer_stops.merge!(connection_options(other_pad_id, [target_module_id]))
+    end
+
+    # @return { ["0 1", "1 3"] => {cost: , point_ratio: , legs: [[], []]} }
+    closer_stops = closer_stops.each_with_object({}) do |(alt_fragment, alt_data), mem|
+      next if alt_data[:cost] >= data[:cost]
+
+      alt_id = alt_fragment.split(" ").first.to_i
+
+      route_key = ["#{pad_id} #{alt_id}", "#{alt_id} #{target_module_id}"]
+
+      combo_cost = (_leg1 = cost_to_join(pad_id, alt_id)) + (_leg2 = alt_data[:cost])
+      combo_potential = data[:point_potential] + alt_data[:point_potential]
+      combo_ratio = (combo_potential.to_f / combo_cost.to_f).round(4)
+
+      next if combo_cost > available_money
+      next if combo_ratio <= data[:point_ratio]
+
+      mem[route_key] = {
+        cost: combo_cost, point_ratio: combo_ratio,
+        legs: [["#{pad_id} #{alt_id}", ], [alt_fragment, alt_data]]
+      }
+    end
+
+    return if closer_stops.none?
+
+    closer_stops.sort_by { |k, v| -v[:point_ratio] }.first
+  end
+
+  # naive prospecting tool, does not check visibility or free slots
+  # @return Integer
+  def cost_to_join(id1, id2)
+    @costs = {}
+    key = "#{id1} #{id2}"
+    return @costs[key] if @costs.key?(key)
+
+    b1 = buildings[id1]
+    b2 = buildings[id2]
+
+    segment = Segment[Point[b1[:x], b1[:y]], Point[b2[:x], b2[:y]]]
+
+    @costs[key] = (segment.length * 10).floor
   end
 
   def build_teleports
@@ -188,7 +279,7 @@ class Controller
     pad = buildings[id]
     connection_options = {}
 
-    modules.each do |module_id|
+    module_ids.each do |module_id|
       house = buildings[module_id]
       if can_receive_tp && building_has_teleport?(module_id)
         next
@@ -199,11 +290,7 @@ class Controller
       next if _no_matching_nauts = (pad[:astronauts].keys & [house[:type]]).empty?
       next if _already_connected = !pad[:connections].nil? && connections.find { _1[:b_id_1] == id && _1[:b_id_2] == module_id }
 
-      distance = Segment[
-        Point[pad[:x], pad[:y]], Point[house[:x], house[:y]]
-      ].length
-
-      cost = (distance * 10).floor
+      cost = cost_to_join(id, module_id)
 
       conn_fragment = "#{id} #{module_id}"
 
@@ -217,7 +304,7 @@ class Controller
         point_ratio: point_ratio,
         existing_connections: house.fetch(:connections, {}).fetch(:in, {}).size
       }
-      debug("Connecting Pad##{id} to Module##{module_id} at distance #{distance} would cost #{cost}")
+      debug("Connecting Pad##{id} to Module##{module_id} would cost #{cost}")
     end
 
     connection_options
@@ -231,6 +318,10 @@ class Controller
   #
   # @param from/to [Id] node id
   def vision?(from:, to:)
+    @vision_blocked_list ||= Set.new
+    key = "#{from} #{to}"
+    return false if @vision_blocked_list.include?(key)
+
     vision_segment = Segment[
       Point[buildings[from][:x], buildings[from][:y]],
       Point[buildings[to][:x], buildings[to][:y]]
@@ -240,7 +331,10 @@ class Controller
       Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
     end
 
-    return false if obscured_by_other_node
+    if obscured_by_other_node
+      @vision_blocked_list << key
+      return false
+    end
 
     obscured_by_tube = connections.find do |conn|
       next if conn[:cap].zero?
@@ -258,13 +352,16 @@ class Controller
       vision_segment.intersect?(tube_segment)
     end
 
-    return false if obscured_by_tube
+    if obscured_by_tube
+      @vision_blocked_list << key
+      return false
+    end
 
     true
   end
 
   # @param root [Id]
-  # @param modules Array<id>
+  # @param modules Array<id,Array>
   def pod_route_from_fragments(root, modules)
     base = modules.map { "#{root} #{_1}" }.join(" ")
 
@@ -419,12 +516,12 @@ class Controller
         end
     end
 
-    debug("Buildings on map:")
-    buildings.first(30).each do |id, data|
-      debug("  #{id} => #{data},")
+    debug("Buildings on map (#{buildings.size}):", 1)
+    buildings.first(40).each do |id, data|
+      debug("  #{id} => #{data},", 1)
     end
-    if buildings.size > 30
-      debug("  .. more omitted ..")
+    if buildings.size > 40
+      debug("  .. more omitted ..", 1)
     end
 
     nil

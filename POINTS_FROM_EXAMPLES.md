@@ -1,8 +1,10 @@
-07. 517_151 - Spiral (good score, some warnings)
-08.  35_643 - Grid (timeout!!)
-09. 446_938 - Expansion (good score, but has tube warnings)
-10. 294_849 - Clusters (timeout midway due to `Took 201ms to process underutilized_pod#65`!)
-11.  75_061 - Nested Layers (has tube max warnings, times out midway)
-12. 323_930 - Distribution (VERY WEAK)
+05. 247_033 - Pairs
+06. 193_580 - Villages | Weak score because no clustering
+07. 557_392 - Spiral ()
+08. 735_480 - Grid (good score, verges on timeout)
+09. 544_131 - Expansion (STILL WARNINGS!!)
+10. 554_185 - Clusters (Quite inefficient)
+11. 446_369 - Nested Layers (has tube max warnings, times out midway)
+12. 258_320 - Distribution (Weak score because no direct visibilities)
 
-TOTAL: 3_324_950
+TOTAL: 4.5M

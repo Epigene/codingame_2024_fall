@@ -43,7 +43,7 @@ class Controller
       initialize_building_list!
     end
 
-    debug("Took #{(time * 1000).round}ms to initialize", 0)
+    debug("Took #{(time * 1000).round}ms to initialize", 3)
   end
 
   # @param money [Integer]
@@ -53,6 +53,7 @@ class Controller
   #
   # @return [String] the improvement command(s) to undertake
   def call(money:, connections: [], pods: {}, new_buildings: [])
+    @time_taken = 0
     time = Benchmark.realtime do
       @commands = []
 
@@ -76,8 +77,8 @@ class Controller
       @command = commands.any? ? commands.join(";") : "WAIT"
     end
 
-    debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 0)
-    raise("Took too long!") if time > 0.490
+    debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 3)
+    raise("Took too long!") if time > 0.49
 
     @command
   end
@@ -95,6 +96,9 @@ class Controller
       end
       report_time(time, "process underutilized_pod##{id}")
       raise("Redoing a pod took too long") if time > 0.1
+
+      @time_taken += time
+      break if @time_taken >= 0.4
     end
 
     nil
@@ -150,7 +154,10 @@ class Controller
       time = Benchmark.realtime do
         connect_pad_to_modules(id)
       end
-      report_time(time, "process pad#{id} connecting")
+      report_time(time, "process Pad##{id} connecting")
+
+      @time_taken += time
+      break if @time_taken >= 0.40
     end
   end
 
@@ -273,24 +280,35 @@ class Controller
 
   def build_teleports
     pads_by_tp_potential.each do |id|
-      next if money < TP_COST
-      next if building_has_teleport?(id)
+      time = Benchmark.realtime do
+        build_teleport(id)
+      end
+      report_time(time, "process build_teleport for pad##{id}")
+      raise("Redoing a pod took too long") if time > 0.05
 
-      # pad = buildings[id]
-      types = pad_unconnected_types(id)
-      next if types.none?
-
-      options = connection_options(id, buildings_by_type[types.first], check_vision: false, can_receive_tp: true)
-
-      next if options.none?
-
-      fragment, _meta = options.sort_by do |k, data|
-        [data[:existing_connections], -data[:cost]]
-      end.first
-
-      command = "TELEPORT #{fragment}"
-      commit_purchase(command, cost: TP_COST)
+      @time_taken += time
+      break if @time_taken >= 0.4
     end
+  end
+
+  def build_teleport(id)
+    return if money < TP_COST
+    return if building_has_teleport?(id)
+
+    # pad = buildings[id]
+    types = pad_unconnected_types(id)
+    return if types.none?
+
+    options = connection_options(id, buildings_by_type[types.first], check_vision: false, can_receive_tp: true)
+
+    return if options.none?
+
+    fragment, _meta = options.sort_by do |k, data|
+      [data[:existing_connections], -data[:cost]]
+    end.first
+
+    command = "TELEPORT #{fragment}"
+    commit_purchase(command, cost: TP_COST)
   end
 
   # @param id [Id] # pad id

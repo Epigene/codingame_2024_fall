@@ -167,8 +167,7 @@ class Controller
 
     return if connection_options.none?
 
-    # binding.pry
-    # remaining_tube_slots = 1
+    remaining_tube_slots = building_free_tube_slots(id)
 
     conn_fragments = []
     money_after_pod = money - POD_COST
@@ -196,7 +195,7 @@ class Controller
     end
 
     # using only as many connections as there are astronaut types arriving
-    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size).first(MAX_TUBES)
+    conn_fragments = conn_fragments.first(buildings[id][:astronauts].keys.size).first(remaining_tube_slots)
     return if conn_fragments.none?
 
     conn_fragments.each do |fragment|
@@ -331,8 +330,12 @@ class Controller
     connection_options
   end
 
-  def building_tube_connections_maxed?(module_id)
-    buildings[module_id].fetch(:connections, {}).fetch(:in, {}).values.count(&:positive?) >= MAX_TUBES
+  def building_free_tube_slots(building_id)
+    MAX_TUBES - buildings[building_id].fetch(:connections, {}).fetch(:in, {}).values.count(&:positive?)
+  end
+
+  def building_tube_connections_maxed?(building_id)
+    building_free_tube_slots(building_id) <= 0
   end
 
   # Vision can be interfered with by other nodes on visibility line, and by tubes crossing

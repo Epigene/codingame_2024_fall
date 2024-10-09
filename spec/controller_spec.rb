@@ -701,7 +701,7 @@ RSpec.describe Controller, instance_name: :controller do
       let(:options) { { money: 100000 } }
 
       it "is quick to give a move even if it's not the best" do
-        expect(call).to eq("yay")
+        expect(call).to include("TUBE")
       end
     end
   end

@@ -87,7 +87,11 @@ class Controller
   def redo_underutilized_pods
     pods.each_pair do |id, data|
       time = Benchmark.realtime do
-        redo_underutilized_pod(id, data)
+        # Has slight inefficiency in that if a relink option is detected, should unlink once and tube all possibilities
+        # and then pod once. Instead, this unlinks end repods one by one.
+        loop do
+          break unless redo_underutilized_pod(id, data)
+        end
       end
       report_time(time, "process underutilized_pod##{id}")
       raise("Redoing a pod took too long") if time > 0.1

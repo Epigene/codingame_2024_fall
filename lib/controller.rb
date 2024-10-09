@@ -16,6 +16,11 @@ class Controller
   attr_reader :pods, :new_buildings
   attr_reader :commands # a mutable array to collect the various moves
 
+  # @return [Pathname] # similar to Rails.root
+  def self.root
+    Pathname.new(File.expand_path("..", __dir__))
+  end
+
   # @param root [Id]
   # @param fragments [id,Array<id>] # arbitrarily deep nesting of sub-arms
   # @param single_loop [Boolean] pass `true` when recursing
@@ -53,34 +58,45 @@ class Controller
   #
   # @return [String] the improvement command(s) to undertake
   def call(money:, connections: [], pods: {}, new_buildings: [])
-    @time_taken = 0
-    time = Benchmark.realtime do
-      @commands = []
+    require "stackprof"
+    require "json"
 
-      #== money calcs
-      @money = money
-      if !@expected_money.nil? && @expected_money != @money
-        debug("Expected money to be #{@expected_money}, but got #{@money - @expected_money} more - #{@money}")
+    profile =
+      StackProf.run(ignore_gc: true, interval: 100, mode: :wall, raw: true) do
+        @time_taken = 0
+        time = Benchmark.realtime do
+          @commands = []
+
+          #== money calcs
+          @money = money
+          if !@expected_money.nil? && @expected_money != @money
+            debug("Expected money to be #{@expected_money}, but got #{@money - @expected_money} more - #{@money}")
+          end
+          #==
+
+          @connections = connections
+          @pods = pods
+          @new_buildings = new_buildings
+
+          update_building_list!(new_buildings)
+
+          redo_underutilized_pods
+          connect_pads_to_modules
+          build_teleports
+
+          @command = commands.any? ? commands.join(";") : "WAIT"
+        end
+
+        debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 3)
+        # raise("Took too long!") if time > 0.49
+
+        @value = @command
       end
-      #==
 
-      @connections = connections
-      @pods = pods
-      @new_buildings = new_buildings
-
-      update_building_list!(new_buildings)
-
-      redo_underutilized_pods
-      connect_pads_to_modules
-      build_teleports
-
-      @command = commands.any? ? commands.join(";") : "WAIT"
-    end
-
-    debug("Took #{(time * 1000).round}ms to execute, ended with #{self.money} money, next interest will be #{@expected_money = (self.money * 1.1).floor}", 3)
-    raise("Took too long!") if time > 0.49
-
-    @command
+    output_file = self.class.root.join("log/stackprof.json")
+    File.write(output_file, JSON.generate(profile))
+    puts "wrote to #{output_file}"
+    @value
   end
 
   private
@@ -98,7 +114,7 @@ class Controller
       raise("Redoing a pod took too long") if time > 0.1
 
       @time_taken += time
-      break if @time_taken >= 0.4
+      # break if @time_taken >= 0.45
     end
 
     nil
@@ -157,7 +173,7 @@ class Controller
       report_time(time, "process Pad##{id} connecting")
 
       @time_taken += time
-      break if @time_taken >= 0.40
+      # break if @time_taken >= 0.45
     end
   end
 
@@ -287,7 +303,7 @@ class Controller
       raise("Redoing a pod took too long") if time > 0.05
 
       @time_taken += time
-      break if @time_taken >= 0.4
+      # break if @time_taken >= 0.45
     end
   end
 
@@ -361,7 +377,7 @@ class Controller
   # @param from/to [Id] node id
   def vision?(from:, to:)
     @vision_blocked_list ||= Set.new
-    key = "#{from} #{to}"
+    key = (from << 32) | to
     return false if @vision_blocked_list.include?(key)
 
     vision_segment = Segment[
@@ -369,11 +385,9 @@ class Controller
       Point[buildings[to][:x], buildings[to][:y]]
     ]
 
-    obscured_by_other_node = buildings.except(from, to).find do |id, data|
-      Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
-    end
+    obscured_by_node = !vision_ignoring_tubes?(from: from, to: to, vision_segment: vision_segment)
 
-    if obscured_by_other_node
+    if obscured_by_node
       @vision_blocked_list << key
       return false
     end
@@ -400,6 +414,21 @@ class Controller
     end
 
     true
+  end
+
+  def vision_ignoring_tubes?(from:, to:, vision_segment:)
+    @vision_ignoring_tubes_list ||= {}
+    key = (from << 32) | to
+
+    return @vision_ignoring_tubes_list[key] if @vision_ignoring_tubes_list.key?(key)
+
+    obscuring_node = buildings.find do |id, data|
+      next if id == from || id == to
+
+      Point[data[:x], data[:y]].on_segment?(vision_segment.p1, vision_segment.p2)
+    end
+
+    @vision_ignoring_tubes_list[key] = obscuring_node.nil?
   end
 
   # @param root [Id]

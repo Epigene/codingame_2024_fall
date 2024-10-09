@@ -27,6 +27,32 @@ RSpec.describe Controller, instance_name: :controller do
   describe "#call(money:, connections:, pods:, new_buildings:)" do
     subject(:call) { controller.call(**options) }
 
+    # example
+    context "when " do
+      let(:options) do
+        {
+          money: 1,
+          connections: [
+            {:b_id_1=>6, :b_id_2=>5, :cap=>1},
+          ],
+          pods: {
+            42 => [20, 2, 0, 2, 0, 2, 0],
+          }
+        }
+      end
+
+      let(:buildings) do
+        {
+          0 => {:type=>1, :x=>71, :y=>84},
+
+        }
+      end
+
+      xit "returns a command to ??" do
+        expect(call).to eq("TODO")
+      end
+    end
+
     context "when called at test case Example 1" do
       let(:options) do
         {
@@ -380,6 +406,102 @@ RSpec.describe Controller, instance_name: :controller do
           "TUBE 13 7;POD 46 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7;TUBE 14 10;TUBE 14 8;POD 47 14 10 14 8 14 10 14 8 14 10 14 8 14 10 14 8 14 10 14 8 14;TELEPORT 13 9"
         )
         expect(call).to_not include("TUBE 11 7")
+      end
+    end
+
+    context "when called early in Example 9 Expansion with 2 tubes existing for pad#30" do
+      let(:options) do
+        {
+          money: 3072,
+          connections: [
+            {:b_id_1=>19, :b_id_2=>20, :cap=>0},
+            {:b_id_1=>13, :b_id_2=>9, :cap=>0},
+            {:b_id_1=>6, :b_id_2=>5, :cap=>1},
+            {:b_id_1=>11, :b_id_2=>10, :cap=>1},
+            {:b_id_1=>14, :b_id_2=>16, :cap=>1},
+            {:b_id_1=>31, :b_id_2=>1, :cap=>1},
+            {:b_id_1=>14, :b_id_2=>17, :cap=>1},
+            {:b_id_1=>28, :b_id_2=>5, :cap=>1},
+            {:b_id_1=>30, :b_id_2=>9, :cap=>1},
+            {:b_id_1=>31, :b_id_2=>12, :cap=>1},
+            {:b_id_1=>28, :b_id_2=>12, :cap=>1},
+            {:b_id_1=>30, :b_id_2=>16, :cap=>1},
+            {:b_id_1=>31, :b_id_2=>21, :cap=>1},
+            {:b_id_1=>24, :b_id_2=>16, :cap=>1},
+            {:b_id_1=>28, :b_id_2=>20, :cap=>1},
+            {:b_id_1=>13, :b_id_2=>7, :cap=>1},
+            {:b_id_1=>14, :b_id_2=>8, :cap=>1},
+            {:b_id_1=>28, :b_id_2=>23, :cap=>1},
+            {:b_id_1=>14, :b_id_2=>10, :cap=>1},
+            {:b_id_1=>3, :b_id_2=>0, :cap=>1},
+            {:b_id_1=>2, :b_id_2=>0, :cap=>1},
+            {:b_id_1=>11, :b_id_2=>9, :cap=>1},
+            {:b_id_1=>19, :b_id_2=>17, :cap=>1},
+            {:b_id_1=>24, :b_id_2=>22, :cap=>1},
+          ],
+          pods: {
+            42 => [20, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0],
+            43 => [20, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0],
+            44 => [20, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5],
+            45 => [21, 11, 10, 11, 9, 11, 10, 11, 9, 11, 10, 11, 9, 11, 10, 11, 9, 11, 10, 11, 9, 11],
+            46 => [20, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7, 13, 7],
+            47 => [21, 14, 10, 14, 8, 14, 16, 14, 10, 14, 8, 14, 16, 14, 10, 14, 8, 14, 16, 14, 10, 14],
+            48 => [20, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17, 19, 17],
+            49 => [21, 24, 22, 24, 16, 24, 22, 24, 16, 24, 22, 24, 16, 24, 22, 24, 16, 24, 22, 24, 16, 24],
+            50 => [21, 28, 23, 28, 20, 28, 12, 28, 5, 28, 23, 28, 20, 28, 12, 28, 5, 28, 23, 28, 20, 28],
+            51 => [21, 31, 1, 31, 12, 31, 21, 31, 1, 31, 12, 31, 21, 31, 1, 31, 12, 31, 21, 31, 1, 31],
+            52 => [21, 30, 16, 30, 9, 30, 16, 30, 9, 30, 16, 30, 9, 30, 16, 30, 9, 30, 16, 30, 9, 30],
+          }
+        }
+      end
+
+      let(:buildings) do
+        {
+          0 => {:type=>1, :x=>71, :y=>84, :connections=>{:in=>{2=>1, 3=>1}, :out=>{2=>1, 3=>1}}},
+          1 => {:type=>1, :x=>89, :y=>84, :connections=>{:in=>{31=>1}, :out=>{31=>1}}},
+          2 => {:type=>0, :x=>80, :y=>70, :astronauts=>{1=>40}, :connections=>{:out=>{0=>1}, :in=>{0=>1}}},
+          3 => {:type=>0, :x=>78, :y=>90, :astronauts=>{1=>40}, :connections=>{:out=>{0=>1}, :in=>{0=>1}}},
+          4 => {:type=>1, :x=>70, :y=>69},
+          5 => {:type=>1, :x=>91, :y=>70, :connections=>{:in=>{6=>1, 28=>1}, :out=>{6=>1, 28=>1}}},
+          6 => {:type=>0, :x=>95, :y=>77, :astronauts=>{1=>40}, :connections=>{:out=>{5=>1}, :in=>{5=>1}}},
+          7 => {:type=>2, :x=>86, :y=>61, :connections=>{:in=>{13=>1}, :out=>{13=>1}}},
+          8 => {:type=>1, :x=>62, :y=>71, :connections=>{:in=>{14=>1}, :out=>{14=>1}}},
+          9 => {:type=>3, :x=>63, :y=>90, :connections=>{:in=>{11=>1, 13=>0, 30=>1}, :out=>{11=>1, 30=>1}}},
+          10 => {:type=>2, :x=>74, :y=>61, :connections=>{:in=>{11=>1, 14=>1}, :out=>{11=>1, 14=>1}}},
+          11 => {:type=>0, :x=>60, :y=>82, :astronauts=>{2=>35, 3=>5}, :connections=>{:out=>{10=>1, 9=>1}, :in=>{10=>1, 9=>1}}},
+          12 => {:type=>4, :x=>105, :y=>81, :connections=>{:in=>{28=>1, 31=>1}, :out=>{28=>1, 31=>1}}},
+          13 => {:type=>0, :x=>100, :y=>64, :astronauts=>{2=>32, 3=>8}, :connections=>{:out=>{7=>1, 9=>0}, :in=>{7=>1}}},
+          14 => {:type=>0, :x=>64, :y=>61, :astronauts=>{3=>17, 4=>1, 1=>1, 2=>21}, :connections=>{:out=>{10=>1, 8=>1, 17=>1, 16=>1}, :in=>{10=>1, 8=>1, 17=>1, 16=>1}}},
+          15 => {:type=>5, :x=>92, :y=>53},
+          16 => {:type=>4, :x=>51, :y=>72, :connections=>{:in=>{14=>1, 24=>1, 30=>1}, :out=>{14=>1, 24=>1, 30=>1}}},
+          17 => {:type=>3, :x=>73, :y=>51, :connections=>{:in=>{14=>1, 19=>1}, :out=>{14=>1, 19=>1}}},
+          18 => {:type=>5, :x=>52, :y=>90},
+          19 => {:type=>0, :x=>55, :y=>63, :astronauts=>{3=>39, 2=>1}, :connections=>{:out=>{17=>1, 20=>0}, :in=>{17=>1}}},
+          20 => {:type=>2, :x=>103, :y=>53, :connections=>{:in=>{28=>1, 19=>0}, :out=>{28=>1}}},
+          21 => {:type=>5, :x=>115, :y=>78, :connections=>{:in=>{31=>1}, :out=>{31=>1}}},
+          22 => {:type=>1, :x=>80, :y=>45, :connections=>{:in=>{24=>1}, :out=>{24=>1}}},
+          23 => {:type=>5, :x=>114, :y=>70, :connections=>{:in=>{28=>1}, :out=>{28=>1}}},
+          24 => {:type=>0, :x=>56, :y=>54, :astronauts=>{1=>9, 5=>27, 2=>1, 4=>3}, :connections=>{:out=>{22=>1, 16=>1}, :in=>{22=>1, 16=>1}}},
+          25 => {:type=>1, :x=>41, :y=>87},
+          26 => {:type=>1, :x=>40, :y=>77},
+          27 => {:type=>1, :x=>68, :y=>42},
+          28 => {:type=>0, :x=>116, :y=>62, :astronauts=>{5=>21, 4=>4, 2=>11, 1=>4}, :connections=>{:out=>{23=>1, 20=>1, 12=>1, 5=>1}, :in=>{23=>1, 20=>1, 12=>1, 5=>1}}},
+          29 => {:type=>4, :x=>117, :y=>54},
+          30 => {:type=>0, :x=>38, :y=>63, :astronauts=>{2=>20, 1=>2, 3=>9, 4=>6, 5=>3}, :connections=>{:out=>{16=>1, 9=>1}, :in=>{16=>1, 9=>1}}},
+          31 => {:type=>0, :x=>125, :y=>82, :astronauts=>{1=>22, 4=>12, 3=>4, 5=>1, 2=>1}, :connections=>{:out=>{1=>1, 12=>1, 21=>1}, :in=>{1=>1, 12=>1, 21=>1}}},
+          32 => {:type=>2, :x=>55, :y=>37},
+          33 => {:type=>2, :x=>88, :y=>31},
+          34 => {:type=>1, :x=>116, :y=>46},
+          35 => {:type=>3, :x=>79, :y=>30},
+          36 => {:type=>9, :x=>130, :y=>74},
+        }
+      end
+
+      it "returns a command to connect the remaining 3, no more, and no repeat colors" do
+        expect(call).to_not include("TUBE 30 25")
+        expect(call).to_not include("TUBE 24 33")
+
+        expect(call).to eq("TODO")
       end
     end
 

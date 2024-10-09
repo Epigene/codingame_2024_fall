@@ -96,32 +96,46 @@ class Controller
     nil
   end
 
+  # @param id [PodId]
+  # @return [Boolean] # if true, can reloop
   def redo_underutilized_pod(id, data) # 42, [20, 0, 1, 0, 1]
     return unless pod_underutilized?(data)
-    return if (unconnected_types = pad_unconnected_types(data[1])).none?
+
+    pad_id = data[1]
+    return if building_tube_connections_maxed?(pad_id)
+    return if (unconnected_types = pad_unconnected_types(pad_id)).none?
 
     options = unconnected_types.each_with_object({}) do |type, mem|
-      mem.merge!(connection_options(data[1], buildings_by_type[type]))
+      mem.merge!(connection_options(pad_id, buildings_by_type[type]))
     end
 
     return if options.none?
 
     money_after_pod = money - REPLACEMENT_COST
 
-    options.sort_by do |k, data|
+    k, d = options.sort_by do |k, data|
       [-data[:point_ratio], data[:cost], data[:existing_connections]]
     end.find do |k, d|
       next if _too_expensive = (money_after_pod - d[:cost]).negative?
 
-      commit_purchase("TUBE #{k}", cost: d[:cost])
-
-      # remove existing route
-      commit_destruction(id)
-
-      # rebuild route, combining existing and new connection
-      route = self.class.pod_route_from_fragments(data[1], *_modules = data[2..].uniq - [data[1]] + [d[:module_id]])
-      commit_purchase("POD #{id} #{route}", cost: POD_COST)
+      true
     end
+
+    return unless k
+
+    commit_purchase("TUBE #{k}", cost: d[:cost])
+
+    # remove existing route
+    commit_destruction(id)
+
+    # rebuild route, combining existing and new connection
+    route = self.class.pod_route_from_fragments(
+      pad_id,
+      *_modules = data[2..].uniq - [pad_id] + [d[:module_id]]
+    )
+    commit_purchase("POD #{id} #{route}", cost: POD_COST)
+
+    true
   end
 
   # VERY naive strat, connects pads directly to modules of matching color nauts.
@@ -148,6 +162,9 @@ class Controller
     connection_options = connection_options(id, modules)
 
     return if connection_options.none?
+
+    # binding.pry
+    # remaining_tube_slots = 1
 
     conn_fragments = []
     money_after_pod = money - POD_COST
@@ -522,12 +539,13 @@ class Controller
     end
 
     debug("Buildings on map (#{buildings.size}):", 1)
-    buildings.first(40).each do |id, data|
+    # buildings.first(40).each do |id, data|
+    buildings.to_a.last(40).each do |id, data|
       debug("  #{id} => #{data},", 1)
     end
-    if buildings.size > 40
-      debug("  .. more omitted ..", 1)
-    end
+    # if buildings.size > 40
+    #   debug("  .. more omitted ..", 1)
+    # end
 
     nil
   end

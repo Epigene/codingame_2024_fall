@@ -159,7 +159,7 @@ class Controller
       next if _too_expensive = (money_after_pod - data[:cost]).negative?
 
       type = buildings[data[:module_id]][:type]
-      next if _type_already_connected = types_connected.include?(type)
+      next if _type_already_connected = types_connected.include?(type) || pad_connected_types(id).include?(type)
 
       alternative = nil# connecting_alternative(id, data[:module_id], data, money_after_pod)
 
@@ -475,11 +475,16 @@ class Controller
     untransfered.values.sum / buildings[root][:astronauts].values.sum.to_f >= 0.4
   end
 
+  def pad_connected_types(id)
+    pad = buildings[id]
+    pad.fetch(:connections, {}).fetch(:out, {}).keys.map { buildings[_1][:type] }.uniq
+  end
+
   # @param id [Id] Pad building id
   # @return [Array<Integer>] # a sorted array of types lacking connections
   def pad_unconnected_types(id)
     pad = buildings[id]
-    connected_types = pad.fetch(:connections, {}).fetch(:out, {}).keys.map { buildings[_1][:type] }
+    connected_types = pad_connected_types(id)
 
     (pad[:astronauts].keys - connected_types).sort_by { pad[:astronauts][_1] }
   end

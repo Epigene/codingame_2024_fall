@@ -376,7 +376,9 @@ RSpec.describe Controller, instance_name: :controller do
       end
 
       it "returns a command to only link unlinked colors, no repeats" do
-        expect(call).to eq ("TODO")
+        expect(call).to eq (
+          "TUBE 13 7;POD 46 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7 13 7;TUBE 14 10;TUBE 14 8;POD 47 14 10 14 8 14 10 14 8 14 10 14 8 14 10 14 8 14 10 14 8 14;TELEPORT 13 9"
+        )
         expect(call).to_not include("TUBE 11 7")
       end
     end
